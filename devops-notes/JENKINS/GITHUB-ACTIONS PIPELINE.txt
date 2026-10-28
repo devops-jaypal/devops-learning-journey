@@ -1,0 +1,311 @@
+APPLICATION PIPELINE
+
+name: student-management CI/CD
+
+on: 
+  push:
+    branches:
+      - master 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin 
+          java-version: '21'
+          cache: maven 
+
+      - name: Build Application
+        run: mvn clean package
+
+      - name: Configure Aws Credentials 
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Test AWS Connection
+        run: aws sts get-caller-identity
+
+      - name: Upload Artifacts to S3 bucket
+        run: aws s3 cp target/*.war s3://mayurcbz.space/student.war
+
+      - name: SonarQube Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          mvn sonar:sonar \
+            -Dsonar.host.url="$SONAR_HOST_URL" \
+            -Dsonar.token="$SONAR_TOKEN"
+
+      - name: SonarQube Quality Gates
+        run: |
+          STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=com.school:student-management" \
+            | jq -r '.projectStatus.status')
+          echo "Quality Gate: $STATUS"
+          [ "$STATUS" = "OK" ] || exit 1
+
+      # - name: OWASP Dependency Check
+      #   env:
+      #     NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      #   run: |
+      #     mvn org.owasp:dependency-check-maven:check \
+      #       -Dformats=HTML \
+      #       -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
+
+      - name: Docker Build Image
+        run: | 
+          docker build -t studentapp .
+          docker images
+
+      - name: Trivy Install 
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget 
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | \
+            gpg --dearmor | \
+            sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | \
+            sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Trivy Image Scanning
+        run: trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 0 studentapp:latest
+
+      - name: Manual Approval
+        run: echo "Deployment Approved"
+
+      - name: Push Image To ECR
+        run: |
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 525382241025.dkr.ecr.us-west-2.amazonaws.com
+          docker tag studentapp:latest 525382241025.dkr.ecr.us-west-2.amazonaws.com/studentapp:latest
+          docker push 525382241025.dkr.ecr.us-west-2.amazonaws.com/studentapp:latest
+
+      - name: Setup Kubectl 
+        uses: azure/setup-kubectl@v5
+        with:
+          version: latest
+
+      - name: Deployment on EKS 
+        run: |
+          aws eks update-kubeconfig --name my-eks-cluster --region us-west-2
+          kubectl apply -f k8s/student-deploy.yaml
+          kubectl apply -f k8s/student-svc.yaml
+          kubectl get pods 
+          kubectl get svc -o wide
+
+      - name: Build Successful
+        run: echo "student-management Build is successful"
+
+
+INFRASTRUCTURE PIPELINE
+
+name: EKS Infrastructure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+
+NEW PIPELINE AFTER CHANGING THE PIPELINES SO INFRASTRUCTURE RUNS 1ST THEN APPLICATION PIPELINE RUNS
+
+INFRASTRUCTURE PIPELINE
+
+name: EKS Infrastructure
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '*.tf'
+      - '.github/workflows/infrastructure.yaml'
+      
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5 
+
+      - name: Configure AWS Credentials 
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Setup Terraform 
+        uses: hashicorp/setup-terraform@v3 
+
+      - name: Terraform Init 
+        run: terraform init
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+
+APPLICATION PIPELINE
+
+name: student-management CI/CD
+
+on:
+  workflow_run:
+    workflows:
+      - EKS Infrastructure
+    types:
+      - completed 
+
+jobs:
+  build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code 
+        uses: actions/checkout@v5 
+        
+      - name: setup java 
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build Application
+        run: mvn clean package 
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Test Aws Connection 
+        run: aws sts get-caller-identity 
+
+      - name: Store Artifacts to S3
+        run: aws s3 cp target/*.war s3://mayurcbz.space/student.war
+
+      - name: SonarQube Analysis
+        env: 
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN}}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          mvn sonar:sonar \
+            -Dsonar.token="$SONAR_TOKEN" \
+            -Dsonar.host.url="$SONAR_HOST_URL"
+
+      - name: SonarQube Quality Gates
+        run: |
+          STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=com.school:student-management" \
+            | jq -r '.projectStatus.status')
+          echo "Quality Gate: $STATUS"
+          [ "$STATUS" = "OK" ] || exit 1
+
+      - name: Build Docker Image 
+        run: | 
+          docker build -t studentapp . 
+          docker images
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget 
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | \
+            gpg --dearmor | \
+            sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | \
+            sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Trivy Image Scanning
+        run: trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 0 studentapp:latest
+
+      - name: Push Image to ECR 
+        run: |
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 822920903800.dkr.ecr.us-west-2.amazonaws.com
+          docker tag studentapp:latest 822920903800.dkr.ecr.us-west-2.amazonaws.com/studentapp:latest
+          docker push 822920903800.dkr.ecr.us-west-2.amazonaws.com/studentapp:latest
+
+      - name: Deployment on kubernetes 
+        run: |
+          aws eks update-kubeconfig --name my-eks-cluster --region us-west-2
+          kubectl apply -f k8s/student-deploy.yaml
+          kubectl apply -f k8s/student-svc.yaml
+          sleep 30
+          kubectl get pods -o wide
+          kubectl get svc -o wide
+
+      - name: Pipeline Successful
+        run: echo "Pipeline is successful"
+
+
+1.Then commit changes in the GitHub & ur infrastructure automatically runs after complete ur application pipeline runs
+
+
+
+
+
+
+
+
+
+
+
+
+
+

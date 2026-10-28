@@ -1,0 +1,128 @@
+APPLICATION DEPLOYMENT ON UBUNTU (STUDENT-MANAGEMENT SYSTEM)
+
+=======================================================================================================================================================================
+
+CREATE A UBUNTU SERVER
+  1.apt update
+  2.apt install openjdk-21-jdk -y
+  3.apt install maven -y
+  4.java --version
+  5.mvn --version
+
+CREATE A MYSQL DATABASE
+  1.user = admin
+  2.password = admin123
+  3.allow sg (mysql-3306)
+
+CONFIGURE DATABASE
+1.apt install mysql-client -y
+2.mysql -u admin -h <db_endpoint> -padmin123
+  1.create database school_db;
+  2.CREATE TABLE IF NOT EXISTS students (
+      id     INT AUTO_INCREMENT PRIMARY KEY,
+      name   VARCHAR(100)  NOT NULL,
+      email  VARCHAR(100)  NOT NULL,
+      course VARCHAR(100)  NOT NULL,
+      marks  DECIMAL(5,2)  NOT NULL DEFAULT 0
+    );
+
+CONFIGURE APPLICATION ON UBUNTU
+1.git clone https://github.com/mayurpandit25/student-management.git
+2.cd student-management
+3.cd src/main/resources
+4.vim db.properties
+  db.url=jdbc:mysql://<RDS-ENDPOINT>:3306/school_db?useSSL=false&serverTimezone=UTC
+  db.user=admin
+  db.password=admin123
+5.cd student-management 
+6.mvn clean package
+7.ls target/
+
+INSTALLING TOMCAT	
+1.wget https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.57/bin/apache-tomcat-10.1.57.tar.gz
+2.tar -xzf apache-tomcat-10.1.57.tar.gz
+
+DEPLOY APPLICATION ON TOMCAT
+1.cp -rf student-management/target/student-management.war apache-tomcat-10.1.57/webapps/student.war
+2.cd apache-tomcat-10.1.57/
+3.cd bin
+4../catalina.sh start
+
+TEST THE APPLICATION INTERNALLY
+1.curl http://localhost:8080/student
+
+TEST THE APPLICATION EXTERNALLY
+1.http://public_ip:8080/student
+
+MAP EC2 INSTANCE TO DOMAIN (HOSTINGER)
+1.Go to Hostinger
+2.click on domain name (mayurcbz.space)
+3.click on DNS nameservers
+4.Go to Manage DNS records
+5.Edit already created A record
+  1.value = (your ec2 instance public_ip)
+  2.TTL = 60
+  3.update
+  
+CONFIGURE REVERSE PROXY ON NGINX (To hide backend servers)
+1.apt update
+2.apt install nginx -y
+3.systemctl start nginx
+4.cd /etc/nginx/sites-available/student
+
+server {
+    listen 80;
+    server_name mayurcbz.space www.mayurcbz.space;
+
+    location / {
+        proxy_pass http://localhost:8080;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+5.nginx -t
+6.ln -s /etc/nginx/sites-available/student /etc/nginx/sites-enabled/
+7.rm -rf /etc/nginx/sites-enabled/default
+8.systemctl restart nginx
+
+TEST THE APPLICATION
+ 1.http://public_ip:8080/student ----- Before Reverse proxy
+ 2.http://public_ip/student ---------- After Reverse proxy
+ 3.http://mayurcbz.space/student ----- Using Domain
+
+CONFIGURE HTTPS (SSL)
+ 1.apt install certbot python3-certbot-nginx -y
+ 2.certbot --version
+ 3.certbot --nginx
+    1.Email Address = (mayur@gmail.com)
+    2.Accept Terms = (Y)
+    3.Redirect HTTP to HTTPS = (Y)
+ 5.systemctl restart nginx
+
+TEST THE APPLICATION USING HTTPS
+ 1.https://mayurcbz.space/student
+
+
+APPLICATION FLOW:-
+
+                    Browser
+        https://mayurcbz.space/student
+                      │
+                      ▼
+                Nginx (Port 443)
+              SSL + Reverse Proxy
+                      │
+                      ▼
+            http://localhost:8080
+                      │
+                      ▼
+          Apache Tomcat (student.war)
+                      │
+                      ▼
+               MySQL / Amazon RDS
+
+=======================================================================================================================================================================

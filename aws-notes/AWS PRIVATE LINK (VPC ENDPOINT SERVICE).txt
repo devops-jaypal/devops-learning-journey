@@ -1,0 +1,32 @@
+AWS PRIVATE LINK (VPC ENDPOINT SERVICE)
+
+=================================================================
+
+1.create a vpc
+  1.name ----- service-provider 
+  2.cidr ----- 11.0.0.0./16
+
+2.create a subnet 
+  1.service-provider-public-subnet-1a (11.0.0.0/24)
+  2.service-provider-public-subnet-1b (11.0.1.0/24)
+  3.service-provider-private-subnet-1a (11.0.2.0/24)
+  4.service-provider-private-subnet-1b (11.0.3.0/24)
+
+3.create a internet gateway and attach to the vpc
+
+4.create a route table 
+  1.service-provider-public-route-table
+    1.route ----- internet-gateway
+    2.subnets --- service-provider-public-subnets
+  2.service-provider-private-route-table
+    1.subnets --- service-provider-private-subnets
+
+5.
+
+
+
+
+
+
+
+=================================================================

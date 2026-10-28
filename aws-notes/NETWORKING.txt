@@ -1,0 +1,166 @@
+						DevOps NETWORKING
+
+==========================================
+
+1.Fundamentals
+2.Network Models
+3.Network Devices
+4.The Network Layer
+5.The Transport Layer
+6.The application Layer
+7.Proxies and Load Balancer
+8.Applied networking for DevOps
+
+==========================================
+
+CHAPTER-1 NETWORKING FUNDAMENTALS
+
+1.History of Computer Networks
+2.Basic Terminologies
+3.What is internet
+4.The broader picture of internet
+5.WWW vs internet
+6.Client-server architecture
+7.Types of Networks
+8.Types of Topologies
+
+TYPES OF NETWOKRS
+1.PAN (personal area network)
+  your personal devices. Bluetooth range
+
+2.LAN (local area network)
+  Your home, your office, your campus, one building or site. private
+
+3.MAN (metropolitan area network)
+  a city or large campus multiple buildings connected. Regional
+
+4.WAN (wide area network)
+  countries, continents the entire globe. the internet is the biggest example
+
+mobile -> wifi -> routers -> ISP -> through submarines we connect the world
+
+
+NETWORK TOPOLOGIES
+1.Bus Topology
+2.Ring Topology
+3.Start Topology
+4.Mesh Topology
+5.Tree Topology
+
+==========================================
+
+CHAPTER-2 NETWORK MODELS
+
+OSI MODELS
+7.application layer
+6.presentation layer
+5.session layer
+4.transport layer
+3.network layer
+2.data link layer
+1.physical layer
+
+All people seem to need data processing
+
+application layer
+1.The software's which interact one human to another works in application layer
+2.Example: Browsers
+
+Presentation layer
+encryption --> Compression --> Translation
+
+Session Layer
+1.To maintain connections between two hosts
+
+Transport Layer
+1.for sending packets from source to dest.
+2.transportation is done in 3 steps
+  1.segmentation
+  2.Flow control
+  3.Error control
+
+Network Layer
+works on ip addresses
+
+Data-link Layer
+It works on the mac addresses
+
+Physical Layer
+Ethernet cables/Wireless Signals
+
+server side
+BITS - FRAME - PACKET - SEGMENT - DECRYPTED - RAW
+
+client side
+RAW - ENCRYPTED - SEGMENT - PACKET - FRAME - BITS
+
+-----------------------------
+
+TCP/IP MODELS
+
+1.Physical layer
+2.Data link layer
+3.Network layer
+4.Transport layer
+5.Application layer
+
+-----------------------------
+
+FOUR WAYS OF MESSAGE DELIVERY
+
+1.Unicast (one to one)
+2.Broadcast (one to all)
+3.Multicast (one to group)
+4.Anycast (one to nearest)
+
+==========================================
+
+CHAPTER-3 NETWORK DEVICES
+
+
+
+
+
+
+
+==========================================
+
+CHAPTER-4 THE NETWORK LAYER
+
+
+
+
+
+==========================================
+
+CHAPTER-5 THE TRANSPORT LAYER
+
+
+
+
+
+==========================================
+
+CHAPTER-6 THE APPLICATION LAYER
+
+
+
+
+
+==========================================
+
+CHAPTER-7 PROXIES & LOAD BALANCER
+
+
+
+
+
+==========================================
+
+CHAPTER-8 APPLIED NETWORKING FOR DEVOPS
+
+
+
+
+
+==========================================

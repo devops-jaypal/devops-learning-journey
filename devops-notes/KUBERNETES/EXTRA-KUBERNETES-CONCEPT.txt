@@ -1,0 +1,368 @@
+Note 1 — Kubernetes NetworkPolicy
+
+1.What NetworkPolicy is
+  NetworkPolicy is a Kubernetes object used to control network traffic between Pods and/or between Pods and external networks.
+  NetworkPolicy acts like a firewall for Kubernetes Pods.
+
+It allows you to define:
+- Which Pods can communicate with which Pods
+- Which namespaces can communicate with which namespaces
+- Which IP ranges can communicate with Pods
+- Which ports are allowed
+- Whether incoming traffic (Ingress) is allowed
+- Whether outgoing traffic (Egress) is allowed
+
+Suppose we have:
+Frontend Pod -> Backend Pod -> Database Pod
+
+We may want:
+Frontend → Backend      ALLOW
+Frontend → Database     DENY
+
+Backend → Database      ALLOW
+Backend → Frontend      DENY
+
+Database → Backend      ALLOW
+Database → Frontend     DENY
+
+NetworkPolicy lets us implement this type of security.
+
+-------------------------------------------------------------------------------
+
+2.Why do we need NetworkPolicy
+
+By default, Kubernetes networking is generally based on:
+All Pods can communicate with all other Pods, subject to the networking implementation/CNI.
+
+For Example:
+Pod A
+  ↕
+Pod B
+  ↕
+Pod C
+  ↕
+Pod D
+
+There is normally no application-level firewall saying:
+"Pod A is allowed to talk to Pod B, but not Pod C."
+
+This can become a security problem.
+
+If an attacker compromises one Pod, unrestricted network access could allow the compromised Pod to communicate with services it should never access.
+NetworkPolicy provides network segmentation.
+
+-------------------------------------------------------------------------------
+
+3.Real World Example
+
+                  Internet
+                     |
+                     ↓
+                    ALB
+                     |
+                     ↓
+                 Frontend
+                     |
+                     ↓
+              ┌──────────────┐
+              │   Backend APIs   │
+              └──────────────┘
+                ↓     ↓     ↓
+             User   Order  Payment
+                \     |     /
+                 \    |    /
+                  Database
+
+Security requirement:
+
+Frontend
+Can communicate with:
+Backend
+
+Cannot communicate directly with:
+Database
+Payment
+
+Backend
+Can communicate with:
+Database
+Payment
+
+Database
+Should accept traffic only from:
+Backend
+
+This is called network segmentation.
+
+-------------------------------------------------------------------------------
+
+4.Important Terminology
+
+1.Ingress - incoming traffic coming to pod
+  Frontend → Backend
+           ↑
+        Ingress
+
+
+2.Egress  - Traffic going out
+  Backend → Database
+          ↑
+        Egress
+
+-------------------------------------------------------------------------------
+
+5.NetworkPolicy structure
+
+A basic NetworkPolicy looks like:
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: example-policy
+  namespace: default
+
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+
+-------------------------------------------------------------------------------
+
+6.podSelector
+
+podSelector:
+  matchLabels:
+    app: backend
+
+Which Pods this NetworkPolicy applies to.
+
+NetworkPolicy selects Pods using labels.
+It does not normally select Pods by Pod name.
+
+-------------------------------------------------------------------------------
+
+7.
+
+
+
+
+
+
+
+-------------------------------------------------------------------------------
+
+- Default Kubernetes networking
+- Ingress vs egress
+- PodSelector
+- NamespaceSelector
+- IPBlock
+- Default deny
+- Allow-list model
+- Frontend → Backend → Database example
+- DNS traffic and NetworkPolicy
+- NetworkPolicy limitations
+- CNI dependency
+- Calico/Cilium/AWS VPC CNI
+- EKS implementation
+- Troubleshooting
+
+===========================================================================================================================================================================================
+
+Note 2 — Kubernetes DNS & CoreDNS
+- Why Kubernetes needs DNS
+- Service DNS
+- Pod DNS
+- FQDN structure
+- service.namespace.svc.cluster.local
+- CoreDNS architecture
+- CoreDNS ConfigMap
+- kubelet and /etc/resolv.conf
+- ClusterIP resolution
+- Headless Service DNS
+- StatefulSet DNS
+- DNS search domains
+- CoreDNS scaling
+- DNS failures
+- Troubleshooting with nslookup, dig, curl
+- Production considerations
+
+===========================================================================================================================================================================================
+
+Note 3 — Kubernetes Security Context
+- Linux user/group concepts
+- UID/GID
+- runAsUser
+- runAsGroup
+- runAsNonRoot
+- fsGroup
+- Capabilities
+- Privileged containers
+- allowPrivilegeEscalation
+- readOnlyRootFilesystem
+- Seccomp
+- AppArmor
+- Pod-level vs container-level security context
+- Real-world secure Pod YAML
+- EKS considerations
+
+===========================================================================================================================================================================================
+
+Note 4 — Pod Security Standards
+- Why Pod Security Standards exist
+- Privileged
+- Baseline
+- Restricted
+- Pod Security Admission
+- Namespace labels
+- Security Context relationship
+- Example migration:
+  Privileged → Baseline → Restricted
+- Common deployment failures
+- Production implementation
+
+===========================================================================================================================================================================================
+
+Note 5 — Metrics Server
+- Metrics vs logs vs monitoring
+- Why Kubernetes needs Metrics Server
+- Metrics API
+- kubelet
+- Metrics Server architecture
+- kubectl top nodes
+- kubectl top pods
+- HPA relationship
+- Metrics Server vs Prometheus
+- Installation
+- Common errors
+- TLS issues
+- EKS considerations
+
+===========================================================================================================================================================================================
+
+Note 6 — Cluster Autoscaler
+- Why pod autoscaling is not enough
+- HPA vs Cluster Autoscaler
+- Pending Pods
+- Node groups
+- Scaling up
+- Scaling down
+- AWS Auto Scaling Groups
+- CA architecture
+- AWS EKS setup
+- IAM requirements
+- Scale-up flow
+- Scale-down flow
+- Common problems
+
+===========================================================================================================================================================================================
+
+Note 7 — Karpenter
+This deserves a separate complete note because you teach EKS.
+- Why Karpenter was created
+- Cluster Autoscaler vs Karpenter
+- NodePool
+- NodeClass
+- Instance selection
+- Spot vs On-Demand
+- Capacity types
+- Requirements
+- Consolidation
+- Disruption
+- Provisioning
+- EKS architecture
+- IAM
+- Real production example
+- Cost optimization
+- Failure scenarios
+
+===========================================================================================================================================================================================
+
+Note 8 — Velero Backup & Restore
+- What backup actually means in Kubernetes
+- Kubernetes objects vs persistent data
+- Velero architecture
+- Backup
+- Restore
+- Schedule
+- S3
+- Volume snapshots
+- CSI snapshots
+- EBS
+- EFS considerations
+- Namespace backup
+- Cluster backup
+- Disaster simulation
+- EKS implementation
+- Backup verification
+- Restore testing
+- RPO/RTO
+
+===========================================================================================================================================================================================
+
+Note 9 — Kubernetes Disaster Recovery
+This should be broader than Velero.
+- What is DR?
+- Backup vs DR
+- RPO
+- RTO
+- Active/Passive
+- Active/Active
+- Multi-AZ
+- Multi-region
+- EKS control plane considerations
+- Worker nodes
+- EBS
+- EFS
+- RDS
+- S3
+- Route 53
+- Load Balancer
+- Secrets
+- Container images
+- Velero
+- GitOps
+- Infrastructure as Code
+- Complete EKS DR architecture
+- Disaster simulation
+
+===========================================================================================================================================================================================
+
+Note 10 — Kubernetes Troubleshooting
+Pod troubleshooting
+Deployment troubleshooting
+ReplicaSet troubleshooting
+Service troubleshooting
+Ingress troubleshooting
+DNS troubleshooting
+Network troubleshooting
+ImagePullBackOff
+CrashLoopBackOff
+Pending
+OOMKilled
+CreateContainerConfigError
+CreateContainerError
+ErrImagePull
+FailedMount
+FailedScheduling
+Readiness probe failure
+Liveness probe failure
+RBAC errors
+Secret/ConfigMap errors
+PVC pending
+EBS CSI errors
+Node NotReady
+DNS failures
+NetworkPolicy failures
+HPA failures
+Metrics Server failures
+
+===========================================================================================================================================================================================

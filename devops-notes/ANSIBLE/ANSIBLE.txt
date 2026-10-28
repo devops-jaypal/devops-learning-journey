@@ -1,0 +1,482 @@
+                                                                            ANSIBLE===>> configuration management tool
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1.ansible is a configuration management tools used for managing and installing the software on the existing servers.
+2.it is based on python 3.9 or newer and work on the port no 22(ssh)
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1.creating a instance(master-node)
+     1.name----------ansible-server
+     2.machine-------centos
+     3.type----------t2.micro
+     4.key-----------id_rsa
+     5.create a instance
+
+2.create a instance(web-host)
+     1.name---------web-host(node)
+     2.machine -----centos
+     3.type---------t2.micro
+     4.key----------id_rsa 
+     5.create a instance
+
+3.access the ansible-server with (gitbash/mobaextreame/ubuntu/cmd)
+     1.yum install epel-release
+     2.yum install ansible -y
+     3.hostnamectl set-hostname ansible-server
+
+     4.get access of web-host on ansible server
+          1.vim id_rsa
+          2.chmod 700 id_rsa 
+          3.ssh -i "id_rsa" centos@(private_ip of web-host) ----------------------------------private ip because they are in same network
+       
+     5.ls /etc/ansible/               --------------------------------------------------------files of ansible bydefault when u install ansible on server
+         ansible.cfg-----> it's a main configuration file
+         hosts-----------> it is a inventory that have the list of hosts-servers
+
+     6.vim /etc/ansible/hosts  ---------------------------------------------------------------you can add host here
+         delete all conf. and add {private ip of web-host}
+         [demo]
+         { private_ip of web-host }
+
+     7.cat /etc/ansible/hosts
+     8.cp /etc/ansible/hosts ./        -------------------------------------------------------copy hosts on the path where our keys should be stored
+
+     9.ansible -i hosts all -u centos --private-key=./id_rsa/ -m shell -a hostname -----------command to configure on web-host
+                
+             { where -i = inventory purpose hosts server list
+                     -u = user
+                     -m = { define module means command of ansible }
+                     -a = { argument }
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**DATATYPES**
+  1.string ----------user1,user2,user3
+  2.numbers----------112212
+  3.boolean----------true,false,1,0
+  4.list-------------["user1","user2"]
+  5.dictionary/map---key-value form
+    address:
+    - name: mayur
+      - city: wardha
+        street: arvi naka
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1.create a repository on github/gitlab/bitbucket
+   1.ansible-----private repository
+2.clone the repo on local system {git clone (paste repo)}
+3.open these file in vs-code
+4.create a 1st_playbook.yml
+
+---
+- name: my first playbook
+  hosts: all
+  tasks:
+  - name: say "hii"
+    debug:
+      msg: "hiii..."
+...
+
+5.git add .
+  git commit -m "playbook"
+  git push origin main
+
+6.git clone on server {git clone repo} ------------------------------------#clone the repo in server
+7.ls /etc/ansible/
+8.cp /etc/ansible/hosts ansible/
+9.cp /etc/ansible/ansible.cfg ansible/
+10.cp id_rsa ansible/
+
+11.cd ansible/
+    1.git add .
+    2.git commit -m "playbook"
+    3.git push origin main -------------------------------------------------#push these in our repository
+
+12.ansible-playbook 1st_playbook.yml
+    {host not matches}
+13.ansible-playbook -u centos --private-key=./id_rsa 1st_playbook.yml
+    {host not matches}
+
+14.cp hosts /etc/ansible
+15.chmod 400 id_rsa
+16.ansible-playbook -u centos --private-key=./id_rsa 1st_playbook.yml
+    {success}
+
+**note:-
+the hosts file should be bydefault redirect from the /etc/ansible if u copy in another folder its not working so u can also edit their path in ansible.cfg so u can customized in any directory as you want
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1.add data in 1st_playbook.yml
+
+---
+- name: my first playbook
+  hosts: all 
+  tasks:
+  - name: say "hii"
+    debug:
+      msg: "hiii"
+  - name: say "hello"
+    debug: 
+      msg: "hello"
+...
+
+2.git add .
+  git commit -m "playbook"
+  git push origin main
+
+3.git pull origin main
+4.ansible-playbook -u centos --private-key=./id_rsa 1st_playbook.yml
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**NOTE**
+
+{ ansible-playbook -u centos --private-key=./id_rsa 1st_playbook.yml }
+
+1.these command should be very long to run so we can short these command like 
+       {ansible-playbook 1st_playbook.yml}
+2.give the user and private_key to the ansible.cfg file
+
+3.go to vs-code and open ansible.cfg 
+   {
+    line_no----107
+    remote_user ---centos
+   
+    line_no----136
+    private_key----./id_rsa 
+   
+    line_no----71
+    host_key_check---false
+   }
+
+2.git add .
+  git commit -m "ansible.cfg"
+  git push origin main
+
+3.git pull origin main
+4.ansible-playbook 1st_playbook.yml
+
+=======================================================================================================================================================================
+
+**VARIABLES**
+
+**GLOBAL VARIABLE
+
+1.create a variable.yml file in vs-code
+
+---
+- name: This is for variable understanding
+  hosts: all 
+  vars:                          ------------------------#global variable
+    URL: "global cloud" 
+  tasks:
+  - name: say "hiii"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "hello"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "how are you"
+    debug: 
+      msg: "{{URL}}"
+...
+
+2.git add .
+  git commit -m "global variable"
+  git push origin main
+
+3.git pull origin main
+4.ansible-playbook variable.yml
+
+==>note:-{global variable change the value}
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**LOCAL-VARIABLE
+
+1.create a variable.yml file
+  
+---
+- name: This is for variable understanding
+  hosts: all 
+  vars:                     ------------------------#global variable
+    URL: "global cloud" 
+  tasks:
+  - name: say "hiii"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "hello"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "how are you"
+    debug: 
+      msg: "{{URL}}"
+    vars:                   -----------------------#local variable
+      URL: "local cloud" 
+...
+
+2.git add .
+  git commit -m "variable"
+  git push origin main
+
+3.git pull origin main
+4.ansible-playbook variable.yml
+
+==>note:-{local variable has a main priority} 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**FILE-TYPE-VARIABLE
+
+1.create a var.txt file for file-type variable in vs-code
+  URL: "file_cloud"
+
+2.create a variable.yml file
+
+---
+- name: This is for variable understanding
+  hosts: all 
+  vars:                     ------------------------#global variable
+    URL: "global cloud" 
+  vars_files:               ------------------------#file type variable
+   - ./var.txt
+  tasks:
+  - name: say "hiii"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "hello"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "how are you"
+    debug: 
+      msg: "{{URL}}"
+    vars:                   -----------------------#local variable
+      URL: "local cloud" 
+...
+
+2.git add .
+  git commit -m "variable"
+  git push origin main
+
+3.git pull origin main
+4.ansible-playbook variable.yml
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**PROMPT-VARIABLE
+
+1.create a variable.yml file
+
+---
+- name: This is for variable understanding
+  hosts: all 
+  vars:                         ------------------------#global variable
+    URL: "global cloud" 
+ #vars_files:                   ------------------------#file type variable
+ # - ./var.txt
+  vars_prompt:                  ------------------------#prompt variable
+  - name: URL
+    prompt: enter your variable value
+  tasks:
+  - name: say "hiii"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "hello"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "how are you"
+    debug: 
+      msg: "{{URL}}"
+    vars:                     -----------------------#local variable
+      URL: "local cloud" 
+...
+
+2.git add .
+  git commit -m "variable"
+  git push origin main
+
+3.git pull origin main
+4.ansible-playbook variable.yml
+   {enter your varible value: (prompt) -------------#these value should not be seen beacause these value is private bydefault in ansible.cfg file
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**TO SEE PROMPT VARIABLE WHEN ENTER THE VARIABLE
+
+---
+- name: This is for variable understanding
+  hosts: all 
+  vars:                         ------------------------#global variable
+    URL: "global cloud" 
+ #vars_files:                   ------------------------#file type variable
+ # - ./var.txt
+  vars_prompt:                  ------------------------#prompt variable
+  - name: URL
+    prompt: enter your variable value
+    private: false             -------------------------#give false to see prompt variable
+  tasks:
+  - name: say "hiii"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "hello"
+    debug: 
+      msg: "{{URL}}"
+  - name: say "how are you"
+    debug: 
+      msg: "{{URL}}"
+    vars:                     -----------------------#local variable
+      URL: "local cloud" 
+...
+
+2.git add .
+  git commit -m "varible"
+  git push origin main
+
+3.git pull origin main
+4.ansible-playbook 1st_playbook.yml
+   {enter your variable value: (prompt)------------these value should be seen while entering
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**COMMAND-LINE-VARIABLE
+
+   { ansible-playbook -e URL=cli_variable variable.yml }
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**priorities based variables
+    1.command line variable
+    2.local var
+    3.file type
+    4.prompt var
+    5.global var
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**HOW TO GIVE HOST-FILE-VARIABLE
+
+1.create a variable.yml file
+
+--- 
+- name: this is for variable understanding 
+  hosts: all 
+  tasks: 
+  - name: say "hiii"
+    debug: 
+      msg: "{{ULR}}"
+  - name: say "hello"
+    debug: 
+      msg: "{{ULR}}"
+  - name: say "how are you"
+    debug: 
+      msg: "{{ULR}}" 
+    vars:
+      URL: "local cloud" 
+... 
+
+2.change in the hosts file in vs-code as well as in path /etc/ansible/hosts
+  {private_IP of webserver} URL=host-file-variable
+
+3.git add .
+  git commit -m "variable"
+  git push origin main
+
+4.cp hosts /etc/ansible/
+
+5.git pull origin main
+
+6.ansible-playbook variable.yml
+
+
+##if you give more space in hosts file then file should note work
+
+-----------------------------------------------------------------------------------------
+
+==>so the priorities according to the variables are
+    1.command line variable 
+    2.local variable
+    3.file type variable
+    4.prompt variable
+    5.global variable
+    6.host-file-variable
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**GATHERING TASK**
+     this file store all the information related about the webservers and ansible should be run these file 1st then other file thats why our tsk will be delay for 
+  running we can customize them by expliciting in the ansible.cfg file then these task should not be run 
+
+1.go to vs-code and edit ansible.cfg file
+  ===>line no 36---->gathering = explicit
+
+2.git add .
+  git commit -m "ansible"
+  git push origin main
+
+3.git pull origin main
+
+4.ansible-playbook variable.yml
+
+## comment these file because we have give these information for our use 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**COLLECTSTATS
+    in these file we can give facts from webserver.
+
+1.create a collectfacts.yml file
+
+---
+- name: gathering facts from webserver 
+  hosts: all 
+  tasks: 
+    - name: collect os name 
+      debug:
+        msg: "{{ansible_distribution}}"
+    - name: collect ip addresses 
+      debug:
+        msg: "{{ansible_default_ipv4}}"
+    - name: collect domain 
+      debug: 
+        msg: "{{ansible_domain}}"
+...
+
+2.git add .
+  git commit -m "collect"
+  git push origin main
+
+3.git pull origin main
+
+4.ansible-playbook collectfacts.yml
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+**REGISTRY**
+    to store variables/values from one task and pass it to the other task
+
+1.create a registry.yml file
+
+---
+- name: register values 
+  hosts: all 
+  tasks: 
+    - name: get hostname
+      shell: hostname 
+      register: URL 
+    - name: print hostname 
+      debug:
+        msg: "{{URL}}"
+... 
+
+2.git add .
+  git commit -m "registry"
+  git push origin main
+
+3.git pull origin main
+
+4.ansible-playbook registry.yml
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+           

@@ -1,0 +1,104 @@
+✅ 20 Most Important Ansible Interview Questions (2-Line Answers)
+1. What is Ansible?
+
+Ansible is an open-source automation tool used for configuration management, deployment, and orchestration.
+It is agentless and uses SSH to communicate with servers.
+
+2. What is an Inventory file?
+
+Inventory is a file containing lists of servers (hosts and groups) that Ansible manages.
+It can be in INI or YAML format and supports host/group-specific variables.
+
+3. What are Playbooks?
+
+Playbooks are YAML files that contain a list of tasks to be executed on remote servers.
+They automate multi-step processes in order.
+
+4. What is an Ansible Role?
+
+A role is a structured way to organize tasks, variables, files, templates, and handlers.
+Roles make automation reusable, scalable, and clean.
+
+5. What is Idempotency in Ansible?
+
+Idempotency means running a task multiple times gives the same result without causing changes.
+Almost all Ansible modules are idempotent except shell/command.
+
+6. What is Ansible Vault?
+
+Ansible Vault encrypts sensitive data like passwords and keys inside playbooks.
+Encrypted files can only be viewed or edited using a vault password.
+
+7. What is the difference between shell and command module?
+
+command runs commands without shell features; no pipes, redirection.
+shell runs commands through the shell (bash), supports pipes, redirects, and variables.
+
+8. What are Handlers in Ansible?
+
+Handlers are tasks triggered only when notified by another task.
+They run at the end of a playbook and are used for actions like restarting services.
+
+9. What are Ansible Facts?
+
+Facts are system information collected automatically (OS, IP, RAM, CPU, etc.).
+They are available inside ansible_facts dictionary.
+
+10. What is gather_facts?
+
+gather_facts: yes collects system facts before running tasks.
+Disabling it speeds up playbook execution.
+
+11. What is a Register variable?
+
+register stores the output of a command/module in a variable.
+This output can be used in conditions, printing, or next tasks.
+
+12. What is a Task in Ansible?
+
+A task is a single action executed on remote hosts using a module.
+Multiple tasks form a play inside a playbook.
+
+13. What is become in Ansible?
+
+become: yes is used for privilege escalation to run tasks as root.
+It can use sudo or other methods to gain admin permissions.
+
+14. What is a Template (Jinja2 template)?
+
+Templates allow dynamic file generation using variables ({{ }}).
+Used for configuration files like nginx.conf, httpd.conf, etc.
+
+15. What is the use of set_fact?
+
+set_fact creates dynamic variables during execution.
+Useful for conditions, calculated values, and runtime decisions.
+
+16. What is delegate_to?
+
+delegate_to allows running a task on a different machine (e.g., localhost).
+Used for API calls, DB queries, or controller-only tasks.
+
+17. What is Async in Ansible?
+
+async runs long tasks in background and doesn't wait for completion.
+Used for long-running scripts or deployments.
+
+18. What are Filters in Ansible?
+
+Filters modify data — like upper, lower, join, default, split.
+They are part of Jinja2 templating engine.
+
+19. What is the difference between vars and defaults?
+
+defaults have the lowest priority; overwritten easily.
+vars have higher priority and override defaults.
+
+20. How do you test a playbook without making changes?
+
+Use:
+
+ansible-playbook play.yml --check
+
+
+This performs a dry run and shows what would change.

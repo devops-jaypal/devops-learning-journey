@@ -1,0 +1,112 @@
+						VPN (VIRTUAL PRIVATE NETWORK)
+
+=====================================================================================================================================
+
+In AWS, VPN (Virtual Private Network) is a networking service used to create a secure encrypted connection between your AWS VPC and another network, such as your company office, data center, or another VPC.
+
+VPN is a secure tunnel over the internet between the two private networks
+
+ Company Office
+  10.10.0.0/16
+      |
+      | Internet
+      |
+   🔐 VPN Tunnel
+      |
+      |
+   AWS VPC
+ 10.0.0.0/16
+
+Your office employees can securely access private AWS resources:
+
+Office PC
+   |
+   | VPN
+   ↓
+AWS VPC
+   |
+   ├── Private EC2
+   ├── RDS
+   └── Internal ALB
+
+The traffic travels through an encrypted VPN tunnel.
+
+=====================================================================================================================================
+
+AWS VPC TYPES
+
+1.site-to-site VPN
+
+On-premises network ↔ AWS VPC
+
+              Internet
+                 |
+        🔐 Site-to-Site VPN
+                 |
+        ┌────────┴────────┐
+        │                 │
+ Company Office        AWS VPC
+10.10.0.0/16          10.0.0.0/16
+        │                 │
+   Servers/PCs          EC2/RDS
+
+Important components of aws site-to-site vpn
+  1.virtual private gateway
+  2.customer gateway
+  3.vpn connection
+
+EXAMPLE:
+
+What happens to the traffic
+company server
+10.10.1.50
+
+AWS private EC2
+10.0.10.50
+
+The company servers want to access the 10.0.10.50
+
+FLOW:
+
+10.10.1.50
+     ↓
+Customer Gateway
+     ↓
+Encrypted VPN Tunnel
+     ↓
+Virtual Private Gateway
+     ↓
+AWS VPC
+     ↓
+10.0.10.50
+
+-------------------------------------------------------------------------------------------------------------------------------------
+
+2.AWS client VPN
+
+Used when individual users/laptops need secure access to AWS resources.
+
+Developer Laptop
+       |
+       | 🔐 Client VPN
+       |
+       ↓
+    AWS VPC
+       |
+       ├── Private EC2
+       ├── Internal ALB
+       └── RDS
+
+=====================================================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,177 @@
+CONFIGURATION OF ANSIBLE ON SERVERS:- (ubuntu)
+
+1.create a instance (ansible-master)
+2.create a instances
+  node-1 
+  node-2
+
+3. { comman-key for all instances }
+
+ACCESS THE ANSIBLE-MASTER
+1.sudo apt-add-repository ppa:ansible/ansible 
+2.sudo apt update
+3.sudo apt install ansible -y 
+4.ansible --version
+
+COPY PRIVATE-KEY FROM LOCAL TO ANSIBLE-MASTER
+6.chmod 400 (pem_file)
+7.scp -i my-key.pem my-key.pem ubuntu@(ip_address):/home/ubuntu/
+
+8.sudo vim /etc/ansible/hosts
+  [demo]
+  node-1 ansible_host=(ip_node-1)
+  node-2 ansible_host=(ip_node-2)
+
+  [demo:vars]
+  ansible_user=ubuntu
+  ansible_ssh_private_key_file=/home/ubuntu/my-key.pem
+  ansible_python_interpreter=/usr/bin/python3
+
+***************************************************************
+
+9.Then run the commands to check
+
+ansible all -m ping
+ansible all --list-hosts
+ansible demo --list-hosts
+ansible demo[0] --list-hosts
+ansible demo[1] --list-hosts
+ansible demo[-1] --list-hosts ---------> to check last hosts
+ansible demo[0:1] --list-hosts --------> to list 1st two hosts
+
+AD-HOC COMMANDS:-
+ansible demo -a "free -h"
+ansible demo -a "sudo apt update"
+ansible-inventory --list
+
+***************************************************************
+
+IF U WANT TO ONLY UPDATE THE 2ND SERVER:-
+  ansible demo[1] -b -a "apt update"
+             
+ANOTHER WAY:-
+1.create a new group like
+  vim /etc/ansible/hosts
+  [prodserver]
+  node-2 ansible_host=(ip_node-2)
+ 
+(  and create variable group all instead of demo name )
+
+  [all:vars]
+  ansible_user=ubuntu
+  ansible_ssh_private_key_file=/home/ubuntu/my-key.pem
+  ansible_python_interpreter=/usr/bin/python3
+
+2.ansible prodserver -m ping
+           or
+  ansible all -m ping
+
+***************************************************************
+
+1.date_playbook.yml
+
+- name: Dates Playbook
+  hosts: demo
+  become: yes
+  
+  tasks: 
+    - name: show date
+      command: date
+
+    - name: show uptime
+      command: uptime
+
+2.ansible-playbook -v date_playbook.yml
+
+***************************************************************
+
+1.vim nginx.yml
+
+---
+- name: Install and Start nginx 
+  hosts: demo
+  become: yes
+
+  tasks: 
+    - name: install nginx
+      apt: 
+        name: nginx
+        state: latest
+    - name: start nginx & enable
+      service: 
+        name: nginx
+        state: started
+        enabled: yes
+
+2.ansible-playbook nginx.yml
+
+***************************************************************
+
+1.vim deploy.yml
+
+---
+- name: Install nginx and Deploy the index.html page
+  hosts: demo
+  become: yes
+  
+  tasks: 
+    - name: install nginx
+      apt: 
+        name: nginx
+        state: present
+
+    - name: start nginx
+      service: 
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: deploy web page
+      copy: 
+        src: index.html
+        dest: /var/www/html/
+
+2.echo "hello-mayur" > index.html
+3.ansible-playbook deploy.yml
+
+***************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

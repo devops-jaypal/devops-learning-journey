@@ -1,0 +1,79 @@
+			                                                   ANSIBLE ON UBUNTU
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1.create a master-node
+    1.name-------master-node 
+    2.machine----ubuntu
+    3.type-------t2.micro
+    4.keys-------id_rsa
+   
+2.create another two instance i.e node1 and node2
+
+3.get access of the master-node on gitbash
+     1.sudo apt update -y 
+     2.sudo apt install ansible -y 
+        3.vim id_rsa 
+        4.chmod 700 id_rsa 
+        5.ssh -i "id_rsa" ubuntu@(private_ip of node1)
+        6.ssh -i "id_rsa" ubuntu@(private_ip of node2)
+     7.cat /etc/ansible/hosts
+     8.mkdir ansible
+     9.cd ansible/
+
+    10.vim hosts
+        [servers]
+        server1 ansible_host=(private_ip of node1)
+        server2 ansible_host=(private_ip of node2)
+        
+        [all:vars]
+        ansible_python_interpreter=/usr/bin/python3
+
+    11.ansible-inventory --list -y -i /home/ubuntu/ansible/hosts
+    12.ansible all -m ping -i /home/ubuntu/ansible/hosts --private-key=/root/id_rsa
+    13.ansible all -a "free -h" -i /home/ubuntu/ansible/hosts --private-key=/root/id_rsa
+    14.ansible servers -a "uptime" -i /home/ubuntu/ansible/hosts --private-key=/root/id_rsa
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+##inventory:-it is a file where it have the all the information about the server like their IP addresses
+
+##module:-it is a command or set of commands to be executed client side
+
+##play:- execution of playbook
+
+##ansible server:-the machine where ansible is installed. playbooks can be run here
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+									  ANSIBLE ON AMAZON-LINUX
+
+1.create a master-node
+    1.name-------master-node 
+    2.machine----amazon-linux2
+    3.type-------t2.micro
+    4.keys-------id_rsa
+   
+2.create another two instance i.e node1 and node2
+
+3.get access of the master-node on gitbash
+     1.sudo yum update -y 
+     2.sudo amazon-linux-extras install epel -y
+     2.sudo yum install ansible -y 
+        2.ansible --version
+          { ansible 2.9.27 }
+        3.vim id_rsa 
+        4.chmod 700 id_rsa 
+        5.ssh -i "id_rsa" ec2-user@(private_ip of node1)
+        6.ssh -i "id_rsa" ec2-user@(private_ip of node2)
+     7.ls /etc/ansible/hosts
+     8.cp /etc/ansible/hosts ./
+     9.vim hosts
+        {delete all the configuration and add {private_ip of node1 and node2}}
+    10.cat hosts
+    11.ls
+    12.ansible -i hosts all -u ec2-user --private-key=./id_rsa -m ping
+    13.ansible -i hosts all -u ec2-user --private-key=./id_rsa -m shell -a hostname
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------

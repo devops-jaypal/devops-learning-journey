@@ -1,0 +1,898 @@
+									JENKINS PROJECT CALCULATOR APP
+
+project url: { https://github.com/mayurpandit25/calcwebappmvn.git }
+=======================================================================================================================================================================
+
+1.create a jenkins-master
+  1.name ------ jenkins-master 
+  2.ami ------- ubuntu
+  3.instance_type ---- c71.flex.large
+  4.create a instance
+
+2.Access the instance
+  1.sudo apt update
+  2.sudo apt install openjdk-21-jdk -y
+  3.install Jenkins (https://www.jenkins.io/doc/book/installing/linux/#debianubuntu)
+  4.sudo systemctl start Jenkins
+  5.<public_ip:8080>
+ 
+3.Install required plugins for project manually
+1.pipeline
+2.ssh
+3.docker-build-steps
+4.docker
+5.ecr
+6.maven
+7.SonarQube scanner
+8.sonar quality gates
+9.quality gates
+10.git
+11.GitHub
+12.aws credentials
+13.pipeline stage view 
+14.terraform
+     
+4.create a pipeline
+  1.name -------- application-pipeline    
+  2.run sample pipeline  
+
+=======================================================================================================================================================================  
+
+1st STAGE (Checkout)
+
+1.add checkout stage in pipeline
+
+  pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mayurpandit25/calcwebappmvn.git'
+            }
+        }
+    }
+}    
+
+2.build the pipeline
+
+=======================================================================================================================================================================
+
+2nd STAGE (Build)
+
+1.configure maven on Jenkins 
+  manage Jenkins ------- tools ------- Maven installations ------- Name (maven1) --------- Install automatically -------- Apply & Save
+
+2.add build stage in pipeline & also add the maven tool in pipeline
+
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mayurpandit25/calcwebappmvn.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                ls -la
+                mvn clean package
+                ls -la '''
+            }
+
+            post {
+                success {
+                    archiveArtifacts 'target/*.war'
+                    sh 'ls -la'
+                }
+            }
+        }
+    }
+}
+
+3.apply pipeline
+
+=======================================================================================================================================================================
+
+3rd STAGE (TEST) (SonarQube analysis)
+
+1.create a SonarQube server
+  1.name --- SonarQube
+  2.ami ---- ubuntu
+  2.instance_type -- c71.flex.large
+  3.port ----- 9000
+  4.storage -- 12GB
+  5.create a instance
+
+2.access the SonarQube
+  1.memory setup
+    1.sudo sysctl -w vm.max_map_count=262144
+    2.sudo vim /etc/sysctl.conf
+      add these line ---- vm.max_map_count=262144
+    3.sudo sysctl -p
+
+  2.Install Docker
+    1.{ https://docs.docker.com/engine/install/ubuntu/ }
+    2.sudo systemctl start docker
+    3.sudo usermod -aG docker $USER
+
+  3.install SonarQube using docker-compose
+    1.sudo vim docker-compose.yml
+version: "3"
+services:
+  sonarqube:
+    image: sonarqube:lts-community
+    depends_on:
+      - db
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://db:5432/sonar
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+      # Limit the Java Heap to 1GB for Compute and 1GB for Web to fit in a 4GB server
+      - SONAR_CE_JAVA_OPTS=-Xmx1g -Xms1g 
+      - SONAR_WEB_JAVA_OPTS=-Xmx1g -Xms1g
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonar
+    volumes:
+      - postgresql:/var/lib/postgresql/data
+    # This command is often needed for PostgreSQL containers on minimal resources
+    command: postgres -c 'max_connections=200'
+
+volumes:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  postgresql:
+
+  4.docker compose up -d
+  5.<public_ip:9000>
+    1.login ------- admin 
+    2.password ---- admin
+
+  6.generate token on SonarQube
+    1.click on profile ---- my account --- security---- tokens --- Name (sonar-token) --- type (global-analysis-token) --- expire(30) --- generate (copy to notepad)
+
+3.Add Generated Token in Jenkins
+  1.manage Jenkins --- credentials --- click on global ---- choose secret-text ----- ID (sonar-token) ---- secret(paste token) ----- save
+
+4.Configure Sonar(installations) on Jenkins 
+  1.manage Jenkins ----- tools ----- SonarQube Scanner Installations ----- add ---- Name (sonar) ----- Install automatically ----- apply and save
+
+5.Configure SonarQube URL in Jenkins
+  1.manage Jenkins ---- system ---- SonarQube servers --- click on env variables --- add SonarQube --- Name (sonar)----- Server URL (http://public_ip:9000) ---- Server authentication token (sonar-token)
+
+6.Add stage (SonarQube analysis)
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mayurpandit25/calcwebappmvn.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                ls -la
+                mvn clean package
+                ls -la '''
+            }
+
+            post {
+                success {
+                    archiveArtifacts 'target/*.war'
+                    sh 'ls -la'
+                }
+            }
+        }
+
+        stage('sonarqube analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+    }
+}
+
+7.Build the pipeline
+
+=======================================================================================================================================================================
+
+4th stage TEST (Quality Gate)
+
+1.Check SonarQube server on port (http://public_ip:9000)
+  1.check projects
+  2.click on project
+  3.check the errors
+
+2.setup quality gates
+   1.click on quality gates
+   2.create quality gates
+   3.name ---- my-quality-gates
+   4.save
+   5.Scroll down ------ unlock editing 
+   6.add condition ---- on overall code ----- quality gates fail when (bugs) ---- operator (value-1) ---- save
+   7.attach ----- scroll down ---- click all ----- select project ---- set as default project
+
+3.Build pipeline again ----- fail the test ----- check the sonar server (fail test because we change the condition to 1 bug only)
+
+4.Add Quality Gate stage in pipeline
+
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mayurpandit25/calcwebappmvn.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                ls -la
+                mvn clean package
+                ls -la '''
+            }
+
+            post {
+                success {
+                    archiveArtifacts 'target/*.war'
+                    sh 'ls -la'
+                }
+            }
+        }
+
+        stage('sonarqube analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        try {
+                            def qg = waitForQualityGate()
+                            echo "Quality Gate Status: ${qg.status}"
+                            if (qg.status != 'OK') {
+                                error "Quality Gate failed: ${qg.status}"
+                            }
+                        } catch (Exception e) {
+                            echo "Quality Gate check failed: ${e.message}"
+                            error "Quality Gate stage failed"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Report') {
+            steps {
+                sh 'ls -la'
+                echo 'SonarQube analysis completed'
+            }
+        }
+    }
+}
+
+5.add condition to pass QG ---- on overall code ----- quality gates fail when (bug) ---- operator (value-3) ---- save { it should pass because we have 2 bugs }
+
+6.Add Webhooks in SonarQube server 
+  1.administration ------ click on configuration ----- webhooks ----- Name(Jenkins) ----- URL(http://public_ip:8080/sonarqube-webhook/)
+
+7.Again Build pipeline ----- pass the test ----- check the sonar server
+
+8.update condition to fail QG ---- on overall code ----- quality gates fail when (bug) ---- operator (value-1) ---- save { it should fail because we have 2 bugs }
+
+9.Again Build pipeline ---- fail the test ----- check the sonar server
+
+10.update condition to pass QG ---- on overall code ---- quality gates fail when (bug) ---- operator (value-3) ---- save { it should pass because we have 2 bugs }
+
+11.Again Build pipeline ---- pass the test ---- check the sonar server
+
+**SonarQube Quality Gate Block Explanation**
+
+1.stage('Quality Gate') 
+Purpose: Checks whether the code passed SonarQube Quality Gate.
+
+2.timeout(time: 5, unit: 'MINUTES') {
+Purpose: Waits a maximum of 5 minutes for SonarQube's response.
+
+3.try (variable block like if/try/catch)
+Purpose: Executes the code. If an error occurs, control goes to catch.
+
+4.def qg = waitForQualityGate()
+Purpose: Waits for SonarQube and stores the Quality Gate result in qg.
+
+5.echo "Quality Gate Status: ${qg.status}"
+Purpose: Prints the Quality Gate status in the Jenkins console.
+Example: ok / Error / Failed
+
+6.if (qg.status != 'OK') 
+Purpose: Checks if the Quality Gate status is not OK.
+
+7.error "Quality Gate failed: ${qg.status}"
+Purpose: Stops the pipeline if the Quality Gate fails.
+
+8.catch (Exception e) {
+Purpose: Handles unexpected errors (server down, timeout, etc.).
+
+9.echo "Quality Gate check failed: ${e.message}"
+Purpose: Displays the actual error message.
+
+10.error "Quality Gate stage failed"
+Purpose: Marks the stage and pipeline as failed.
+
+=======================================================================================================================================================================
+
+5th stage BUILD (USING DOCKER)
+ 
+1.Install Docker on Jenkins-Master
+   1.install docker {https://docs.docker.com/engine/install/ubuntu/}
+   2.sudo usermod -aG docker Jenkins
+   3.sudo systemctl restart docker
+   4.systemctl restart Jenkins
+		OR
+{ Install Docker manually or Add in Tools section }
+ manage Jenkins --- tools --- Docker installations --- add --- Name(docker1) --- install automatically --- add installer (download from docker.com) --- apply and save
+
+2.Add docker build stage in pipeline
+
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mayurpandit25/calcwebappmvn.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                ls -la
+                mvn clean package
+                ls -la '''
+            }
+
+            post {
+                success {
+                    archiveArtifacts 'target/*.war'
+                    sh 'ls -la'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        try {
+                            def qg = waitForQualityGate()
+                            echo "Quality Gate Status: ${qg.status}"
+                            if (qg.status != 'OK') {
+                                error "Quality Gate failed: ${qg.status}"
+                            }
+                        } catch (Exception e) {
+                            echo "Quality Gate check failed: ${e.message}"
+                            error "Quality Gate stage failed"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Report') {
+            steps {
+                sh 'ls -la'
+                echo 'SonarQube analysis completed'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                ls -la
+                docker build -t calc:v1 .
+                docker images
+                '''
+            }
+        }
+    }
+}
+
+3.Build the pipeline
+
+=======================================================================================================================================================================
+
+6th stage PUSH (ECR)
+
+Add Stage Docker push to ECR
+
+1.create a access-key & secret-key on aws
+
+2.Add credentials in Jenkins
+  1.manage Jenkins ---- credentials ---- global credentials ---- AWS credentials ----- ID(aws-access) ----- paste-access_key---- paste-secret_key
+
+3.Add environment section for credentials in pipeline
+4.change the tags 
+5.push to ECR 
+
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven1'
+    }
+
+    environment {
+        my_aws_credential = credentials('aws-access')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mayurpandit25/calcwebappmvn.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                ls -la
+                mvn clean package
+                ls -la '''
+            }
+
+            post {
+                success {
+                    archiveArtifacts 'target/*.war'
+                    sh 'ls -la'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        try {
+                            def qg = waitForQualityGate()
+                            echo "Quality Gate Status: ${qg.status}"
+                            if (qg.status != 'OK') {
+                                error "Quality Gate failed: ${qg.status}"
+                            }
+                        } catch (Exception e) {
+                            echo "Quality Gate check failed: ${e.message}"
+                            error "Quality Gate stage failed"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Report') {
+            steps {
+                sh 'ls -la'
+                echo 'SonarQube analysis completed'
+            }
+        }
+
+        stage('docker build') {
+            steps {
+                sh '''
+                ls -la
+                docker build -t calc:v1 .
+                docker images
+                '''
+            }
+        }
+
+        stage('docker push to ECR') {
+            steps {
+                sh '''
+                aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 632295789918.dkr.ecr.us-west-2.amazonaws.com
+                docker tag calc:v1 632295789918.dkr.ecr.us-west-2.amazonaws.com/app_cal:latest
+                docker push 632295789918.dkr.ecr.us-west-2.amazonaws.com/app_cal:latest
+                '''
+            }
+        }
+    }
+}
+
+6.Build the Pipeline
+
+=======================================================================================================================================================================
+
+ANOTHER PIPELINE FOR CREATION OF INFRASTRUCTURE
+
+7th stage (CREATE CLUSTER USING TERRAFORM)
+
+1.configure terraform in Jenkins
+  1.manage Jenkins ---- tools ---- terraform installation ----- Name(tf-install) ---- install automatically ---- version ---- terraform60603.linux(amd64)
+
+2.add the terraform in tools section in pipeline
+
+3.create a infrastructure-pipeline
+   1.name ---- infrastructure-pipeline
+   2.scm ----- https://github.com/mayurpandit25/calcwebappmvn.git
+   3.script path ---- Jenkinsfile-cluster
+   4.apply & save
+
+pipeline {
+    agent any
+
+    environment {
+        my_aws_access = credentials('aws-access')
+    }
+
+    tools {
+        terraform 'tf-install'
+    }
+    
+    stages {
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+         stage('Terraform fmt-validate') {
+            steps {
+                sh '''
+                terraform fmt
+                terraform validate
+                '''
+            }
+        }
+         stage('Terraform plan') {
+            steps {
+                sh 'terraform plan'
+            }
+        }
+         stage('Terraform APPLY') {
+            steps {
+                sh 'terraform apply -auto-approve'
+            }
+        }
+    }
+}
+
+4.Build the pipeline
+
+=======================================================================================================================================================================
+
+8th Stage DEPLOY TO KUBERNETES
+
+1.Install kubectl (sudo snap install kubectl --classic)
+2.Add Deploy to Kubernetes stage in pipeline
+3.update image name in manifest
+
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven1'
+    }
+
+    environment {
+        my_aws_credential = credentials('aws-access')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mayurpandit25/calcwebappmvn.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                ls -la
+                mvn clean package
+                ls -la '''
+            }
+
+            post {
+                success {
+                    archiveArtifacts 'target/*.war'
+                    sh 'ls -la'
+                }
+            }
+        }
+
+        stage('sonarqube analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        try {
+                            def qg = waitForQualityGate()
+                            echo "Quality Gate Status: ${qg.status}"
+                            if (qg.status != 'OK') {
+                                error "Quality Gate failed: ${qg.status}"
+                            }
+                        } catch (Exception e) {
+                            echo "Quality Gate check failed: ${e.message}"
+                            error "Quality Gate stage failed"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Report') {
+            steps {
+                sh 'ls -la'
+                echo 'SonarQube analysis completed'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                ls -la
+                docker build -t calc:v1 .
+                docker images
+                '''
+            }
+        }
+
+        stage('docker push to ECR') {
+            steps {
+                sh '''
+                aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 632295789918.dkr.ecr.us-west-2.amazonaws.com
+                docker tag calc:v1 632295789918.dkr.ecr.us-west-2.amazonaws.com/app_cal:latest
+                docker push 632295789918.dkr.ecr.us-west-2.amazonaws.com/app_cal:latest
+                '''
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                aws eks update-kubeconfig --name my-cluster-mp --region us-west-2
+                kubectl apply -f calc-deployment-svc.yaml
+                kubectl get all
+                '''
+            }
+        }
+
+        stage('deployment verification') {
+            steps {
+                sh '''
+                kubectl get all
+                kubectl get pods
+                sleep 10
+                kubectl get svc -o wide
+                '''
+            }
+        }
+    }
+}
+
+4.Build the Pipeline
+
+=======================================================================================================================================================================
+
+9th Stage POST
+
+1.Add post stage in pipeline
+
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven1'
+    }
+
+    environment {
+        my_aws_credential = credentials('aws-access')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mayurpandit25/calcwebappmvn.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                ls -la
+                mvn clean package
+                ls -la '''
+            }
+
+            post {
+                success {
+                    archiveArtifacts 'target/*.war'
+                    sh 'ls -la'
+                }
+            }
+        }
+
+        stage('sonarqube analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        try {
+                            def qg = waitForQualityGate()
+                            echo "Quality Gate Status: ${qg.status}"
+                            if (qg.status != 'OK') {
+                                error "Quality Gate failed: ${qg.status}"
+                            }
+                        } catch (Exception e) {
+                            echo "Quality Gate check failed: ${e.message}"
+                            error "Quality Gate stage failed"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Report') {
+            steps {
+                sh 'ls -la'
+                echo 'SonarQube analysis completed'
+            }
+        }
+
+        stage('docker build') {
+            steps {
+                sh '''
+                ls -la
+                docker build -t calc:v1 .
+                docker images
+                '''
+            }
+        }
+
+        stage('docker push to ECR') {
+            steps {
+                sh '''
+                aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 632295789918.dkr.ecr.us-west-2.amazonaws.com
+                docker tag calc:v1 632295789918.dkr.ecr.us-west-2.amazonaws.com/app_cal:latest
+                docker push 632295789918.dkr.ecr.us-west-2.amazonaws.com/app_cal:latest
+                '''
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                aws eks update-kubeconfig --name my-cluster-mp --region us-west-2
+                kubectl apply -f calc-deployment-svc.yaml
+                kubectl get all
+                '''
+            }
+        }
+
+        stage('deployment verification') {
+            steps {
+                sh '''
+                kubectl get all
+                kubectl get pods
+                sleep 10
+                kubectl get svc -o wide
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}
+
+2.Build the pipeline
+
+=======================================================================================================================================================================
+   
+IMPLEMENT WEBHOOK ON GITHUB
+
+1.go to the GitHub (https://github.com/mayurpandit25/calcwebappmvn.git)
+4.click on repository settings
+5.click on webhook----> add webhook
+    1.payload URL-----> http://public_ip:8080/github-webhook/ ----------#Add the Jenkins URL here
+    2.content type----> application/json
+    3.events----------> just push the event
+    4.active----------> click on active
+    5.add webhook
+
+=======================================================================================================================================================================
+
+Run infrastructure-pipeline 1st using webhook then automatically run application-pipeline
+
+1.click on infrastructure-pipeline
+  1.enable ----- GitHub hook trigger for GITScm polling
+ 
+2.Click on application-pipeline
+  1.enable ----- Build after other projects are built ------ Projects to watch (infrastructure-pipeline)
+
+3.Then only change the code in the repo, Webhook automatically triggers the infrastructure pipeline and these pipeline automatically trigger application pipeline
+
+=======================================================================================================================================================================
+
+

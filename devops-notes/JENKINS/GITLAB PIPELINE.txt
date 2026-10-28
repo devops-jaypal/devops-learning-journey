@@ -1,0 +1,351 @@
+GITLAB PIPELINE
+
+===================================================
+
+A web-based DevOps lifecycle tool
+
+provides
+1.CI/CD pipeline features
+2.collaboration on code and project management
+3.monitoring and security tool
+
+===================================================
+
+automate various parts of software development
+
+1.building
+2.testing
+3.deploy
+
+===================================================
+
+What is CI/CD
+
+1.continuous integration
+Build - test - merge
+
+2.Continuous Delivery
+Automatically release to repository
+
+3.Continuous Deployment
+Automatically deploy to production
+
+===================================================
+
+creating first pipeline
+
+1.create a file (act as a pipeline file)
+  .gitlab-ci.yml
+
+Write the pipeline in (.gitlab-ci.yml)
+
+#Build step
+build:
+    script:
+        - echo "First step"
+        - echo "Second step"
+
+2.When u commit the changes pipeline automatically runs
+
+3.Click on build to check the logs
+
+===================================================
+
+GITLAB RUNNER
+
+
+
+
+===================================================
+
+RUNNING MULTIPLE JOBS
+
+#Build step
+build-job:
+    script:
+        - echo "Building step"
+
+test-job:
+    script:
+        - echo "Testing step"
+
+deploy-job:
+    script:
+        - echo "Deployment step"
+
+1.if we run the pipeline, pipeline runs in these format
+  1.build-job
+  2.deploy-job
+  3.test-job
+
+2.To run pipeline in the systematic order
+
+stages:
+    - build
+    - test
+    - deploy
+
+build-job: 
+    stage: build
+    script:
+        - echo "Building step"
+
+test-job:
+    stage: test
+    script:
+        - echo "Testing step"
+
+deploy-job:
+    stage: deploy
+    script:
+        - echo "Deployment step"
+
+3.Again run the pipeline, pipeline runs in the order
+  1.build-job
+  2.test-job
+  3.deploy-job
+
+4.If suppose my build stage is failed then our test and deploy stage also failed, but if we want to manually run the test stage then we can simply run the test stage by clicking the resume icon
+
+===================================================
+
+RUNNING BASH SCRIPT
+
+1.create a file in GitLab
+basic.sh
+  #!/bin/bash
+  echo "These is from bash script"
+  touch myfile.txt
+  echo "Sample text" > myfile.txt
+  echo "These is end of script..."
+
+2.update .gitlab-ci.yml file
+
+bash_execute: 
+    script:
+        - bash ./basic.sh
+
+3.run & check the pipeline
+
+4.But if you are creating files these files are not stored it in the project, u get the error like...
+  {Cleaning up project directory and file based variables}
+
+5.if we want to stored then we use the artifact
+
+===================================================
+
+GITLAB ARTIFACTS
+
+1.update .gitlab-ci.yml
+
+#To run bash script
+
+bash_execute:
+    script: 
+        - mkdir myfolder
+        - cp ./basic.sh myfolder/
+        - cd myfolder
+        - bash ./basic.sh
+        - touch newfile
+    artifacts: 
+      paths: 
+          - "./myfolder"
+      when: on_success
+      access: all
+      expire_in: 30 days
+
+2.Run the pipeline and check the logs
+
+3.on the right side u get the artifact states
+  1.keep 
+  2.download
+  3.browse
+
+===================================================
+
+PIPELINE AUTO RUN
+
+Whenever we change in the files of the project our pipeline is automatically runs
+
+===================================================
+
+ENVIRONMENT VARIABLES
+
+1.Go to setting of project
+2.click on CI/CD
+3.click on variables
+4.click on Add variables
+  1.type ---- variable(default)
+  2.env ----- all default
+  3.visibility ---- visible
+  4.key ----- NAME
+  5.value --- GITLAB
+  6.add variable
+
+5.Add another variable
+  1.type ---- variable(default)
+  2.env ----- all default
+  3.visibility ---- masked
+  4.key ----- PASS
+  5.value --- TEST
+  6.add variable
+
+6.update .gitlab-ci.yml
+
+bash_execute:
+    script: 
+        - echo "Name is $NAME"
+        - echo "Password is $PASS"
+
+7.Run the pipeline and check the logs
+  Name is GITLAB
+  Password is [MASKED]
+
+===================================================
+
+EMAIL NOTIFICATION
+
+1.Whenever pipeline is failed we get notify on mail
+  Failed pipeline for main | b310df41
+
+2.If we fixed the pipeline then u get the mail
+  Fixed pipeline for main | 96bb0867
+
+===================================================
+
+SCHEDULE JOBS USING CRON
+
+Automatically runs pipeline on schedule time
+
+1.click on build
+2.click on pipeline schedules
+  1.create a new pipeline schedules
+  2.description --- runs every minute
+  3.interval pattern --- custom
+    { * * * * * }
+  4.create pipeline schedule
+
+3.Your pipeline runs on every minute
+
+===================================================
+
+MANUAL DEPLOYMENT
+
+1.update .gitlab-ci.yml 
+2.and add the manual on deploy stage
+
+stages:
+    - build
+    - test
+    - deploy
+
+build-job:
+    stage: build
+    script:
+        - echo "Building step"
+
+test-job:
+    stage: test
+    script:
+        - echo "Testing step"
+
+deploy-job:
+    stage: deploy
+    when: manual
+    script:
+        - echo "Deployment step"
+
+2.Run the pipeline and check the pipeline
+
+3.The build and test stage is success but deployment stage is not running, we can manually runs the stage by click on the resume button
+
+===================================================
+
+PRE-DEFINED VARIABLES
+
+1.check variables on these website
+{https://docs.gitlab.com/ci/variables/predefined_variables/}
+
+2.update .gitlab-ci.yml
+
+build:
+    script:
+        - echo $CI_COMMIT_AUTHOR
+
+
+3.Run the pipeline & check the logs
+
+4.Output
+  $ echo $CI_COMMIT_AUTHOR
+    Mayur pandit <panditmayur888@gmail.com>
+
+===================================================
+
+WORKING WITH GIT (IMPORTING GITHUB PROJECT)
+
+1.Importing GitHub repo into GitLab
+  1.create a project
+  2.click on import project
+  3.click on GitHub
+  4.authenticate GitHub
+  5.search project and import
+
+on these imported project
+1.create a file
+  .gitlab-ci.yml
+
+2.Update the .gitlab-ci.yml
+  
+build:
+    script:
+        - python test.py
+
+3.Run the pipeline and check the logs
+
+===================================================
+
+RUN JOBS USING CUSTOM IMAGE
+
+1.Update the .gitlab-ci.yml
+
+build:
+    image: python:latest
+    script:
+        - python test.py
+
+2.Run the pipeline and check the logs
+
+===================================================
+
+PROJECT - STATIC WEB HOSTING
+
+1.create a static-web-hosting repository
+  1.index.html
+  2.style.css
+
+2.create a .gitlab-ci.yml
+
+image: alpine:latest
+pages
+    script:
+      - mkdir public
+      - cp index.html style.css public
+      
+    artifacts: 
+      paths: 
+        - "public"
+    only:
+      - main
+
+2.Run the pipeline & check the logs
+
+3.click on artifacts
+  1.browse
+  2.click on public directory
+  3.click on index.html file
+  4.you get the website
+
+===================================================
+
+
+

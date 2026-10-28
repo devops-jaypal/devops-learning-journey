@@ -1,0 +1,60 @@
+ANSIBLE ======> configuration management tool
+
+CREATION OF SERVERS
+  ansible(master)
+  node1
+  node2
+
+INSTALL THE ANSIBLE
+1.yum install ansible -y
+2.systemctl stat ansible
+3.systemctl enable ansible
+
+ON ANSIBLE SERVER
+1.vim /etc/ansible/hosts
+  [demo]
+  (node1_ip_address)   #node1
+  (node2 ip_address)   #node2
+
+2.vim /etc/ansible/ansible_cfg
+uncomment line inventory and sudo su
+inventory      = /etc/ansible/hosts
+sudo_user      = ansible
+
+3.create ansible user on these three servers and give the password and get the sudo privileged
+  vim /etc/sudoers
+  ansible ALL=(ALL) NOPASSWD: ALL
+  
+get the access of nodes on ansible server
+1.ssh (ip_node1)
+2.ssh (ip_node2)
+
+u have to enter the password everytime for the nodes
+
+ON NODE-1 & NODE-2
+1.vim /etc/ssh/sshd_conig
+  uncomment 1st passwordauthentification yes
+  comment next passwordauthentification no
+2.systemctl restart sshd
+
+ON ANSIBLE-SERVERa
+3.su - ansible
+  ssh-keygen
+  cd /home/ansible/.ssh
+  ssh-copy-id ansible@(node1_ip) 
+  ssh-copy-id ansible@(node2_ip)
+
+ON ANSIBLE-SERVER
+  su - ansible 
+  ssh ansible@node1_ip_address
+  ssh ansible@node2_ip_address
+
+Then run the commands to check
+1.ansible all -m ping
+1.ansible all --list-hosts
+2.ansible demo --list-hosts
+3.ansible demo[0] --list-hosts
+4.ansible demo[1] --list-hosts
+5.ansible demo[2] --list-hosts 
+6.ansible demo[-1] --list-hosts ---------> to check last hosts
+7.ansible demo[0:1] --list-hosts --------> to list 1st two hosts

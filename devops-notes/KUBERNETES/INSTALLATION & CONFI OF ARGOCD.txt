@@ -1,0 +1,268 @@
+                                                               INSTALLATIONS & CONFIGURATIONS USING ARGOCD
+
+=======================================================================================================================================================================
+
+DECLARATIVE WAY TO CREATE APPLICATIONS
+
+1.kubectl create namespace argocd
+kubectl create namespace argocd
+
+2.Install Argocd using below command
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+or Install
+
+sudo kubectl apply --server-side --force-conflicts \
+-n argocd \
+-f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.1/manifests/install.yaml
+
+3.Expose Argocd server using port-forwarding
+kubectl port-forward svc/argocd-server -n argocd 8080:443 --address=0.0.0.0
+
+4.To get the password
+kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 -d; echo
+
+5.vim deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:      
+  name: my-deployment
+  labels: 
+    app: myapp
+spec: 
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+
+6.vim service.yaml
+apiVersion: v1
+kind: Service
+metadata: 
+  name: my-svc
+  labels: 
+    app: myapp
+spec: 
+  type: ClusterIP
+  selector: 
+    app: myapp
+  ports:
+    - name: my-svc-port
+      protocol: TCP
+      port: 80
+      targetPort: 80
+
+5.vim application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-demo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mayurpandit25/argocd.git
+    targetRevision: HEAD
+    path: ./
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+6.kubectl apply -f application.yaml
+7.kubectl get application -n argocd
+8.kubectl get pods
+9.kubectl get svc
+
+8.Check the Argocd-Server
+  http://public_ip:8080
+
+9.check the application Sync or not
+
+10.Then update the GitHub Repository
+   1.update the deployment.yaml to replicas 4 and then commit the changes
+  
+11.Refresh the Argocd server
+
+---------------------------------------------------------------------------------
+
+HOW PRUNE WORKS
+
+1.Suppose u delete the manifest file from the GitHub then argocd also delete the resource from the cluster
+2.delete the service manifest from the GitHub and then commit the changes
+3.after that refresh the argocd server u will get only the deployment file
+
+---------------------------------------------------------------------------------
+
+HOW SYNC-POLICY WORKS
+
+1.Suppose u have only the 2 pods
+2.And u change the deployment state to 4
+  kubectl scale deployment/my-deployment --replicas=4
+3.Then when u check the pods u get only the 2 pods its because of the argocd autosync policy 
+4.Argocd autosync policy checks the GitHub deployment and manage these state accordingly
+
+---------------------------------------------------------------------------------
+
+HOW SYN-OPTIONS WORKS
+
+1.suppose if i want to deploy the application in the dev namespace
+2.Then i have to create the namespace first
+3.Instead of that i directly add the namespace in the application.yaml 
+
+  syncOptions:
+    - CreateNamespace=true
+
+=======================================================================================================================================================================
+
+CREATE APPLICATIONS USING CLI
+
+Install Argocd server
+  1.curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+  2.chmod +x /usr/local/bin/argocd
+  3.argocd version --client
+
+Login to Argo CD Server
+  1.argocd login localhost:8080 --username admin --password admin123 --insecure
+  2.if using loadbalancer then add lb dns instead of localhost:8080
+
+List Argo CD Applications
+  1.argocd app list
+  2.kubectl get app -n argocd
+
+Create Application Using CLI
+argocd app create apache-app \
+  --repo https://github.com/mayurpandit25/argocd.git \
+  --path CLI-approach/apache \
+  --revision main \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace default \
+  --sync-policy automated
+
+Check Application Details
+  1.argocd app get apache-app
+
+=======================================================================================================================================================================
+
+CREATE APPLICATIONS USING GUI
+
+ON URL
+http://public_ip:8080/
+
+1.click on new app
+2.application name --- nginx
+3.project name ------- default
+4.sync policy -------- automatic
+   1.enable sync policy
+   2.enable auto heal
+5.source ------------- https://github.com/mayurpandit25/argocd.git
+5.revision ----------- main
+6.path ---------------./
+7.destination -------- https://kubernetes.default.svc
+8.namespace ---------- default
+9.create the application
+
+10.click on application u get the pods
+
+=======================================================================================================================================================================
+
+TO RUN ARGOCD ON LOADBALANCER
+
+1.kubectl edit svc argocd-server -n argocd
+  change: clusterIP -> LoadBalancer
+
+2.kubectl get svc argocd-server -n argocd
+
+=======================================================================================================================================================================
+
+ARGOCD FEATURES
+
+1.create a folder argocd-features/projects in vs code
+
+2.project.yaml
+apiVersion: argoproj.io/v1alpha1 
+kind: AppProject               
+metadata:
+  name: frontend-team         
+  namespace: argocd          
+spec:
+  description: Project for frontend team apps   
+  sourceRepos:               
+    - https://github.com/mayurpandit25/argocd.git
+  destinations:                
+    - namespace: frontend
+      server: https://kubernetes.default.svc  
+  clusterResourceWhitelist:    
+    - group: "*"              
+      kind: "*"               
+  namespaceResourceWhitelist:  
+    - group: "*"              
+      kind: "*"
+  roles:                      
+    - name: frontend-admins      
+      description: Admins for frontend team
+      policies:               
+        - p, proj:frontend-team:frontend-admins, applications, *, frontend-team/*, allow  # Full access to all apps in this Project, Here p = policy, proj = project, applications = resource, * = action (all actions), frontend-team/* = resource name pattern, allow = effect (allow or deny)
+
+3.nginx-app.yaml
+apiVersion: argoproj.io/v1alpha1 
+kind: Application             
+metadata:                                            
+  name: nginx-frontend      
+  namespace: argocd            
+spec:
+  project: frontend-team       
+  source:
+    repoURL: https://github.com/mayurpandit25/argocd.git 
+    targetRevision: main     
+    path: GUI-approach/nginx    
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: frontend         
+  syncPolicy:                   
+    automated:                   
+      prune: true                
+      selfHeal: true            
+    syncOptions:              
+      - CreateNamespace=true     
+
+4.kubectl apply -f project.yaml
+5.kubectl apply -f nginx-app.yaml
+
+6.Check it on the argocd u get the application nginx-app in frontend-team project
+
+=======================================================================================================================================================================
+
+APP OFF APP
+
+1.create a app_off_apps inside the argocd-features folder in vs-code
+
+
+
+
+
+
+
+
+
+
+=======================================================================================================================================================================
+
+
+
+
+
+

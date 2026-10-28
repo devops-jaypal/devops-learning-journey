@@ -1,0 +1,1242 @@
+								ANSIBLE:- configuration management tool
+ 
+
+***********************************************************************************************************************************************************************
+
+CONFIGURATION OF ANSIBLE ON SERVERS:- (ubuntu)
+
+1.create a instance (ansible-master)
+2.create a instances
+  node-1 
+  node-2
+
+3. { comman-key for all instances }
+
+ACCESS THE ANSIBLE-MASTER
+1.sudo apt-add-repository ppa:ansible/ansible 
+2.sudo apt update
+3.sudo apt install ansible -y 
+4.ansible --version
+
+COPY PRIVATE-KEY FROM LOCAL TO ANSIBLE-MASTER
+6.chmod 400 my-key.pem
+7.scp -i my-key.pem my-key.pem ubuntu@(ip_address):/home/ubuntu/
+
+8.sudo vim /etc/ansible/hosts
+  [demo]
+  node-1 ansible_host=(ip_node-1)
+  node-2 ansible_host=(ip_node-2)
+
+  [demo:vars]
+  ansible_user=ubuntu
+  ansible_ssh_private_key_file=/home/ubuntu/my-key.pem
+  ansible_python_interpreter=/usr/bin/python3
+
+***************************************************************
+
+9.Then run the commands to check
+
+ansible all -m ping
+ansible all --list-hosts
+ansible demo --list-hosts
+ansible demo[0] --list-hosts
+ansible demo[1] --list-hosts
+ansible demo[-1] --list-hosts ---------> to check last hosts
+ansible demo[0:1] --list-hosts --------> to list 1st two hosts
+
+AD-HOC COMMANDS:-
+ansible demo -a "free -h"
+ansible demo -a "sudo apt update"
+ansible-inventory --list
+
+***************************************************************
+
+IF U WANT TO ONLY UPDATE THE 2ND SERVER:-
+  ansible demo[1] -b -a "apt update"
+             
+ANOTHER WAY:-
+1.create a new group like
+  vim /etc/ansible/hosts
+  [prodserver]
+  node-2 ansible_host=(ip_node-2)
+ 
+(  and create variable group all instead of demo name )
+
+  [all:vars]
+  ansible_user=ubuntu
+  ansible_ssh_private_key_file=/home/ubuntu/my-key.pem
+  ansible_python_interpreter=/usr/bin/python3
+
+2.ansible prodserver -m ping
+           or
+  ansible all -m ping
+
+***********************************************************************************************************************************************************************
+
+AD-HOC COMMANDS:-
+
+   These are the commands which can be run individually to perform quick functions.
+
+syntax:- { ansible <group-name> -a "<arguments>" }
+
+1.ansible demo -a "ls"
+2.ansible demo[0] -a "touch file"
+3.ansible all -a "touch file1"
+4.ansile demo -ba "yum install httpd -y"
+5.ansible demo -ba "yum remove httpd -y"
+
+note:-
+a ------> arguments
+b ------> sudo privileged 
+[0] ----> on node1
+[-1] ---> on last node
+demo ---> group name (on nodes that are in group)
+all ----> on all nodes 
+
+***********************************************************************************************************************************************************************
+
+MODULES:-
+
+   A module in Ansible is a pre-defined unit of code (like a small program) that performs a specific task on managed nodes.
+
+syntax:- { ansible <group> -m <module_name> -a "<arguments>" }
+
+1.ansible demo -b -m yum -a "name=httpd state=present" -------------> to install a package
+2.ansible demo -b -m yum -a "name=httpd state=absent" --------------> to remove the package
+3.ansible demo -b -m service -a "name=httpd state=started" ---------> to start the service
+4.ansible demo -b -m service -a "name=httpd state=stopped" ---------> to stop a service
+5.ansible demo -b -m copy -a "src=/root/file/ dest=/tmp/file" ------> to copy the file
+6.ansible demo -b -m user -a "name=mayur state=present" ------------> to create a user
+7.ansible demo -b -m user -a "name=mayur state absent" -------------> to remove the user
+8.ansible all -m ping ----------------------------------------------> to ping all the servers 
+9. ansible demo -m setup -------------------------------------------> to get all the info about the node
+10.ansible demo -m setup -a "filter=*ipv4*" ------------------------> to get only the ipv4 address info
+
+***********************************************************************************************************************************************************************
+
+PLAYBOOKS:-
+
+  playbooks are basically contains the instructions for what you want to automate on your servers.
+                       or 
+  playbooks allow you to automate multiple task in a defined order instead of running ad-hoc commands one by one.
+                       or 
+  playbooks contains the set of instructions to automate configuration, deployment and management of servers.
+
+why we use playbooks:-
+1.automates tasks
+2.reusable
+3.ordered steps
+4.idempotent 
+5.ci-cd
+
+***********************************************************************************************************************************************************************
+
+1.test.yml
+
+---
+- name: Install and Start httpd server
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: Install httpd package
+      yum:
+        name: httpd
+        state: present
+
+    - name: Start and enable httpd service
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+2.ansible-playbook test.yml
+
+***********************************************************************************************************************************************************************
+
+CREATING A FILE AND ASSIGN THE PERMISSION:-
+
+1.file.yml
+
+--- 
+- name: create a file with file module
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+vim 
+  tasks: 
+    - name: creating of file
+      file: 
+        path: /tmp/file.txt
+        state: touch
+        owner: mayur
+        group: mayur
+        mode: 0777
+ 
+     - name: creating a directory
+       file:
+         path: /tmp/myfolder
+         state: directory
+
+2.ansible-playbook file.yml
+
+***********************************************************************************************************************************************************************
+
+CREATE AND RUN THE SCRIPT:-
+
+1.test.sh
+
+#!/bin/bash
+echo "hey buddy"
+touch testfile.txt
+
+2.chmod 755 test.sh -------------> executable permission
+
+3.test.yml
+
+---
+- name: run the script
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+ 
+  tasks: 
+    - name: Run script
+      shell: ./test.sh
+      args:
+        chdir: /home/ubuntu   # <-- folder where test.sh is located
+
+4.ansible-playbook test.yml
+
+***********************************************************************************************************************************************************************
+
+CRON-JOBS:-
+
+1.cron-job.yml
+
+---
+- name: creating a cron-job
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: creating cron-job
+      cron: 
+        name: Run Test Script
+        minute: "*"
+        hour: "*"
+        day: "*"
+        month: i"*"
+        weekday: "*"
+        user: ubuntu
+        job: /home/ubuntu/test.sh
+
+2.ansible-playbook cron-job.yml
+
+***************************************************************
+
+REMOVE CRON-JOBS:-
+
+1.remove-job.yml
+vi remo
+---
+- name: modify cron
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+ 
+  tasks: 
+    - name: remove cron job
+      cron:  
+        name: Run Test Script -----------> privous cronjob name
+        state: absent
+        user: ubuntu
+        
+2.ansible-playbook remove-job.yml
+
+***********************************************************************************************************************************************************************
+
+USER-CREATION:-
+
+1.user.yml
+
+---
+- name: creating users
+  hosts: demo
+  become: yes
+
+  tasks: 
+    - name: create mayur user
+      user: 
+        name: mayur
+        shell: /bin/bash
+        
+2.ansible-playbook user.yml
+
+***************************************************************
+
+CREATION OF MULTIPLE USERS:-
+
+1.multipleuser.yml
+
+---
+- name: create multiple users
+  hosts: demo
+  become: yes
+
+  vars:
+    user_list: 
+      - mayur
+      - rahul
+      - admin
+ 
+  tasks: 
+    - name: add each user
+      user: 
+        name: "{{ item }}"
+        shell: /bin/bash
+      loop: "{{ user_list }}"
+
+2.ansible-playbook multipleuser.yml
+
+***************************************************************
+
+CREATION OF USER WIH PASSWORD:-
+
+1.openssl passwd -6 mypassword123
+  { $6$H8csLzkd98sdfg$d7a9k. }
+
+2.userpasswd.yml
+
+---
+- name: user with password
+  hosts: demo
+  become: yes
+  
+  tasks: 
+    - name: user with password
+      user: 
+        name: mayur
+        shell: /bin/bash
+        password: "$6$H8csLzkd98sdfg$d7a9k."
+
+2.ansible-playbook userpasswd.yml
+
+***************************************************************
+
+ADD USER TO GROUP:-
+
+1.adduser_to_group.yml
+
+---
+- name: user with password
+  hosts: demo
+  become: yes
+  
+  tasks: 
+    - name: user with password
+      user: 
+        name: mayur
+        groups: sudo,docker
+        append: yes
+
+2.ansible-playbook adduser_to_group.yml
+
+***************************************************************
+
+DELETE USER:-
+
+1.delete_user.yml
+
+---
+- name: Delete user
+  hosts: demo
+  become: yes
+
+  tasks:
+    - name: Remove user mayur
+      user:
+        name: mayur
+        state: absent
+        remove: yes      # also remove home directory
+
+2.ansible-playbook delete_user.yml
+
+***************************************************************
+
+FULL CREATION OF USER:-
+
+1.user.yml
+
+---
+- name: Complete user setup
+  hosts: demo
+  become: yes
+
+  vars:
+    username: mayur
+    enc_password: "$6$H8csLzkd98sdfg$d7a9k."
+
+  tasks:
+    - name: Create user with home dir and password
+      user:
+        name: "{{ username }}"
+        shell: /bin/bash
+        create_home: yes
+        password: "{{ enc_password }}"
+
+    - name: Add user to sudo group
+      user:
+        name: "{{ username }}"
+        groups: sudo
+        append: yes
+
+2.ansible-playbook user.yml
+
+***********************************************************************************************************************************************************************
+
+KILL AND START PROCESS:-
+
+1.kill_start.yml
+
+---
+- name: kill and start process
+  hosts: demo
+  become: yes
+
+  tasks: 
+  - name: find a process and kill it
+    shell: "pgrep nginx | xargs kill"
+    
+  - name: start the service
+    service: 
+      name: nginx
+      state: started
+
+2.ansible-playbook kill_start.yml
+
+***********************************************************************************************************************************************************************
+
+DOWNLOAD FILE FROM INTERNET:-
+
+1.download_extract.yml
+
+---
+- name: Download and extract Tomcat
+  hosts: demo
+  become: yes
+
+  tasks:
+    - name: create a /opt/tomcat directory
+      file: 
+        path: /opt/tomcat
+        state: directory
+        mode: '0755'
+
+    - name: Download Tomcat
+      get_url:
+        url: https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.112/bin/apache-tomcat-9.0.112.tar.gz
+        dest: /tmp/apache-tomcat-9.0.112.tar.gz
+        mode: '0644'
+
+    - name: Extract Tomcat
+      unarchive:
+        src: /tmp/apache-tomcat-9.0.112.tar.gz
+        dest: /opt/tomcat/
+        remote_src: yes
+
+2.ansible-playbook download_extract.yml
+
+**********************************************************************************************************************************************************************
+
+RUN ANSIBLE AS A LOCAL USER:-
+
+1.create a user-mayur
+  su - mayur
+  ssh -keygen
+  ssh-copy-id mayur@(clone_serverip)
+
+note:- create a another user in clone server also
+
+2.ansible-playbook task.yml
+
+Note:- if u ask for a password add in the command...
+
+3.ansible-playbook --ask-become-pass task.yml
+
+How to fix:-
+
+1.add these line in the file
+  sudo visudo
+  mayur ALL=(ALL) NOPASSWD: ALL
+
+2.set ansible inventory (hosts)
+/etc/ansible/hosts
+[demo]
+192.168.0.6 ansible_user=mayur ansible_ssh_private_key_file=/home/mayur/.ssh/id_rsa ansible_become=yes
+
+**********************************************************************************************************************************************************************
+
+TAGS:-
+
+1.tags.yml
+
+---
+- name: install and start the service
+  hosts: demo
+  become: yes
+  
+  tasks: 
+    - name: install nginx
+      yum: 
+        name: nginx
+        state: present
+      tags: i-nginx
+
+     - name: start service
+       service: 
+         name: nginx
+         state: started
+         enabled: true
+       tags: ss-nginx
+
+2.ansible-playbook tags.yml --list-tags
+3.ansible-playbook tags.yml -t i-install  -----> only run 1task
+4.ansible-playbook tags.yml --skip-tags ss-nginx----> to skip
+
+**********************************************************************************************************************************************************************
+
+VARIABLES:-
+   
+1.Variables in Ansible are placeholders that store values — like package names, usernames, file paths, ports, etc.
+2.They make your playbooks dynamic, reusable, and easier to maintain.
+
+1.variable.yml
+
+---
+- name: Install and Start HTTPD server 
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  vars:
+    package_name: httpd
+    service_name: httpd
+
+  tasks:
+    - name: Install HTTPD server
+      yum:
+        name: "{{ package_name }}"
+        state: present
+
+    - name: Start and Enable HTTPD Service
+      service:
+        name: "{{ service_name }}"
+        state: started
+        enabled: yes
+
+2.ansible-playbook variable.yml
+
+***********************************************************************************************************************************************************************
+
+HANDLERS:-
+ 
+1.Handlers are special tasks in Ansible that run only when notified by another task. 
+2.Handlers are like event-driven tasks — they execute only if something changes in the system.
+
+1.handlers.yml
+
+---
+- name: Install and Start Apache using Handlers
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: Install Apache package
+      yum:
+        name: httpd
+        state: present
+      notify: Restart Apache    #Triggers the handler only if this task changes
+
+    - name: Copy index.html file
+      copy:
+        src: index.html
+        dest: /var/www/html/index.html
+      notify: Restart Apache    #This also triggers the same handler
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: httpd
+        state: restarted
+
+2.ansible-playbook handlers.yml
+
+***********************************************************************************************************************************************************************
+
+DRY-RUN:-
+  
+  check wheather the playbook is formatted correctly
+
+{ ansible-playbook handlers.yml --check }
+
+***********************************************************************************************************************************************************************
+
+LOOPS:-
+  
+1.A loop allows you to repeat a task multiple times with different values — instead of writing the same task again and again.
+2.So rather than writing 5 install tasks for 5 packages, you can loop through a list using one clean task.
+  
+INSTALLING MULTIPLE-PACKAGES
+
+1.loop.yml
+
+---
+- name: Install multiple packages using loop
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: Install packages
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - httpd
+        - vim
+        - git
+
+2.ansible-playbook loop.yml
+
+****************************************************************
+
+CREATING MULTIPLE-FILES
+
+1.loop.yml
+
+---
+- name: Create multiple files using loop
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: Create files
+      file:
+        path: "/tmp/{{ item }}"
+        state: touch
+      loop:
+        - file1.txt
+        - file2.txt
+        - file3.txt
+
+2.ansible-playbook loop.yml
+
+****************************************************************
+
+LOOPING OVER DICTIONARIES (create users)
+
+1.loop.yml
+
+---
+- name: Add multiple users with details
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: Create users
+      user:
+        name: "{{ item.name }}"
+        state: present
+        shell: "{{ item.shell }}"
+      loop:
+        - { name: "raj", shell: "/bin/bash" }
+        - { name: "amit", shell: "/bin/zsh" }
+
+2.ansible-playbook loop.yml
+
+****************************************************************
+
+NESTED LOOPS (WITH LOOP_CONTROL)
+
+1.loop.yml
+
+---
+- name: Nested loop example
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: Print combinations
+      debug:
+        msg: "Installing {{ item[0] }} version {{ item[1] }}"
+      loop: "{{ lookup('cartesian', ['nginx','httpd'], ['1.0','2.0']) }}"
+
+2.ansible-playbook loop.yml
+
+****************************************************************
+
+LOOP-CONTORL
+
+1.loop.yml
+
+- name: Install packages
+  yum:
+    name: "{{ package }}"
+    state: present
+  loop:
+    - httpd
+    - git
+  loop_control:
+    loop_var: package
+
+2.ansible-playbook loop.yml
+
+***********************************************************************************************************************************************************************
+
+CONDITIONS:-
+
+  whenever we have different different scenarios, we put conditions according to the scenario.
+
+{ ansible all -m setup ---------> to check information about the servers. }
+
+1.conditions.yml
+
+---
+- name: Install Web Server only on RedHat systems
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: Install Apache on RedHat
+      yum:
+        name: httpd
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Install Apache on Debian
+      apt:
+        name: apache2
+        state: present
+      when: ansible_os_family == "Debian"
+
+2.ansible-playbook conditions.yml
+
+***********************************************************
+
+USE WHEN WITH LOOPS
+
+1.conditions.yml
+
+---
+- name: Install only selected packages
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: Install packages
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - httpd
+        - mysql
+        - nginx
+      when: item != "mysql"
+
+
+2.ansible-playbook conditions.yml
+
+ { this will install httpd and nginx but skip MySQL }
+
+***********************************************************************************************************************************************************************
+
+VAULT:-
+
+  Ansible allows keeping sensitive data such as passwords or keys in encrypted files, rather than a plaintext in your playbooks.
+
+1.creating a new encrypted playbook
+  ansible-vault create vault.yml
+
+2.edit the encrypted playbook
+  ansible-vault edit vault.yml
+
+3.To change the password
+  ansible-vault rekey vault.yml
+
+4.To encrypt an existing playbook
+  ansible-vault encrypt target.yml
+
+5.To decrypt an encrypted playbook
+  ansible-vault decrypt target.yml
+
+6.To view an encrypted file
+  ansible-vault view vault.yml
+
+*************************************************************
+
+1.ansible-vault create vault.yml
+  password:
+
+---
+- name: Install only selected packages
+  hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  tasks:
+    - name: Install packages
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - httpd
+        - mysql
+        - nginx
+      when: item != "mysql"
+
+2.vim vault.yml
+ 
+  { these file is encrypted with AES256 we can't read the file }
+
+3.ansible-vault view vault.yml
+password:
+  
+  { you can view the file only u have to give the password }
+
+*************************************************************
+
+TO ENCRYPT/DECRYPT THE FILE ====>>>
+
+1.vim handlers.yml
+
+2.ansible-vault encrypt handlers.yml
+
+3.vim handlers.yml
+  { u can't see the file because the file is encrypted with AES256 }
+
+4.ansible-vault decrypt handlers.yml
+  password:
+  { the file is decrypted u can see the file } 
+
+***********************************************************************************************************************************************************************
+
+REGISTER VARIABLE:-
+
+1.register.yml
+
+---
+- name: Register output example
+  hosts: demo
+
+  tasks:
+    - name: Check uptime
+      command: uptime
+      register: uptime_output
+
+    - name: Print uptime
+      debug:
+        msg: "{{ uptime_output.stdout }}"
+
+2.ansible-playbook register.yml
+
+***********************************************************************************************************************************************************************
+
+BLOCK, RESCUE, ALWAYS:-
+
+1.block.yml
+
+---
+- name: Error handling example
+  hosts: demo
+  become: yes
+
+  tasks:
+    - block:
+        - name: Try to install a wrong package
+          yum:
+            name: wrongpackage
+            state: present
+
+      rescue:
+        - name: Print error message
+          debug:
+            msg: "Package installation failed!"
+
+      always:
+        - name: Always run task
+          debug:
+            msg: "This task always runs"
+
+
+2.ansible-playbook block.yml
+
+***********************************************************************************************************************************************************************
+
+DELEGATE_TO:-
+
+1.vim delegate.yml
+
+---
+- name: Delegate example
+  hosts: demo
+
+  tasks:
+    - name: Check local time from controller
+      command: date
+      delegate_to: localhost
+
+2.ansible-playbook delegate.yml
+
+***********************************************************************************************************************************************************************
+
+ASYNC & POLL (BACKGROUND TASKS):-
+
+Interviewers ask: "How do you run long tasks in background?"
+
+1.vim async.yml
+
+---
+- name: Async task example
+  hosts: demo
+
+  tasks:
+    - name: Run sleep 30 in background
+      command: sleep 30
+      async: 40
+      poll: 0
+
+2.ansible-playbook async.yml
+
+***********************************************************************************************************************************************************************
+
+SET_FACT (DYNAMIC VARIABLES):-
+
+1.vim setfact.yml
+
+---
+- name: Set dynamic variable
+  hosts: demo
+
+  tasks:
+    - name: Create dynamic variable
+      set_fact:
+        welcome_msg: "Hello Mayur"
+
+    - name: Print message
+      debug:
+        msg: "{{ welcome_msg }}"
+
+2.ansible-playbook setfact.yml
+
+***********************************************************************************************************************************************************************
+
+FILTERS (VERY IMPORTANT):-
+
+Interviewer may ask: "What is your favorite filter?"
+
+1.vim filters.yml
+
+---
+- name: Filters example
+  hosts: demo
+
+  vars:
+    users: ["mayur", "rahul", "admin"]
+
+  tasks:
+    - name: Convert list to string
+      debug:
+        msg: "{{ users | join(', ') }}"
+
+    - name: Convert to uppercase
+      debug:
+        msg: "{{ 'hello ansible' | upper }}"
+
+2.ansible-playbook filters.yml
+
+***********************************************************************************************************************************************************************
+
+TEMPLATES (JINJA2):-
+
+1.vim index.html.j2
+Welcome {{ user_name }}
+Server OS: {{ ansible_facts['os_family'] }}
+
+2.vim template.yml
+---
+- name: Deploy template file
+  hosts: demo
+  become: yes
+
+  vars:
+    user_name: Mayur
+
+  tasks:
+    - name: Place template
+      template:
+        src: index.html.j2
+        dest: /var/www/html/index.html
+
+3.ansible-playbook template.yml
+
+***********************************************************************************************************************************************************************
+
+ROLE — WRITE A SIMPLE ROLE:-
+
+1.roles/web/tasks/main.yml
+
+---
+- name: install httpd
+  yum: 
+    name: httpd
+    state: present
+ 
+- name: start service
+  service: 
+    name: httpd
+    state: started
+
+2.role-master.yml
+
+---
+- name: dmeo
+  become: yes
+  roles:
+    - web
+
+3.ansible-playbook role-master.yml
+
+***********************************************************************************************************************************************************************
+
+ROLES:-
+ 
+1.Roles are a way to automatically load related vars, files, tasks, templates, and handlers based on a known file structure.
+2.A role is like a folder structure that keeps all the things (tasks, variables, templates, handlers, etc.) for one function — separated and reusable.
+
+Roles-Structure:-
+
+roles/
+└── webserver/
+    ├── tasks/
+    │   └── main.yml
+    ├── handlers/
+    │   └── main.yml
+    ├── templates/
+    │   └── index.html.j2
+    ├── files/
+    │   └── httpd.conf
+    ├── vars/
+    │   └── main.yml
+    ├── defaults/
+    │   └── main.yml
+    └── meta/
+        └── main.yml
+
+Install package tree to see the role-structure:-
+yum install tree -y
+
+tasks -------------> Contains the main tasks, like installing packages or starting services.
+handlers ----------> Contains handlers that are triggered by tasks (for example, restarting httpd after installation).
+templates ---------> Contains Jinja2 template files that can be dynamically customized before deployment.
+files -------------> Contains static files that will be copied directly to target systems.
+vars --------------> Contains variables that are specific to this particular role.
+defaults ----------> Contains default variables for the role (these have the lowest priority).
+meta --------------> Defines metadata about the role, including dependencies on other roles.
+  
+
+PRACTICAL:-1
+
+1.mkdir -p roles/webserver/tasks
+2.tree
+
+3.touch roles/webserver/tasks/main.yml
+
+4.vim roles/webserver/tasks/main.yml
+
+---
+- name: Install httpd package
+  yum:
+    name: httpd
+    state: present
+- name: Start and enable httpd service
+  service:
+    name: httpd
+    state: started
+    enabled: yes
+
+
+5.vim master.yml
+
+---
+- hosts: demo
+  user: ubuntu
+  become: yes
+  connection: ssh
+
+  roles: 
+    - webserver
+
+6.ansible-playbook master.yml
+
+
+PRACTICAL SEEN LIKE THESE:-
+
+master
+roles/
+└── webserver/
+    └── tasks/
+        └── main.yml
+
+***********************************************************************************************************************************************************************
+
+PRACTICAL:-2
+
+mkdir -p /etc/ansible/playbooks/roles/
+
+1.ansible-galaxy init httpd_setup
+2.cd httpd_setup
+
+3.cd tasks
+4.vim main.yml
+---
+- name: install HTTPD
+  yum: 
+    name: "{{ package }}"
+    state: present
+  become: true
+
+- name: place custom HTML file
+  copy: 
+    src: index.html
+    dest: "{{ html_file_path }}"
+  become: true
+
+- name: start the service
+  service: 
+    name: "{{ package }}"
+    state: started
+    enabled: yes
+  become: true
+    
+
+5.cd ../files
+6.echo "hello ansible" > index.html
+
+7.cd ../vars
+8.vim main.yml
+--- 
+package: httpd
+html_file_path: /var/www/html/index.html
+
+
+CREATE A ROLE FOR FIREWALLD
+9.anisble-galaxy init fwd_service
+10.cd fwd_service
+
+11.cd tasks
+12.vim main.yml
+---
+- name: Enable service in firewalld
+  firewalld:
+    service: "{{ service_name }}"
+    state: enabled
+    permanent: true
+  immediate: true
+  when: ansible_os_family == "RedHat"
+  notify: Restart Firewall
+
+13.cd ../vars
+14.vim main.yml
+---
+service_name: http
+
+
+15.cd ../handlers
+16.vim main.yml
+---
+- name: Restart Firewall
+  service: 
+    name: firewalld
+    state: restarted
+  become: true
+
+ 
+16.cd 
+17. cd /etc/ansible/
+18.cd playbooks
+19.vim role_demo.yml
+---
+- name: install httpd and enable firewall
+  hosts: all
+  roles: 
+    - httpd_setup
+    - fwd_service
+
+20.ansible-playbook role_demo.yml
+
+
+STRUCTURE LIKE THESE:-
+
+/etc/ansible/
+└── playbooks/
+    ├── role_demo.yml
+    └── roles/
+        ├── httpd_setup/
+        │   ├── defaults/
+        │   ├── files/
+        │   │   └── index.html
+        │   ├── handlers/
+        │   ├── meta/
+        │   ├── tasks/
+        │   │   └── main.yml
+        │   ├── templates/
+        │   ├── tests/
+        │   └── vars/
+        │       └── main.yml
+        │
+        └── fwd_service/
+            ├── defaults/
+            ├── files/
+            ├── handlers/
+            │   └── main.yml
+            ├── meta/
+            ├── tasks/
+            │   └── main.yml
+            ├── templates/
+            ├── tests/
+            └── vars/
+                └── main.yml
+/etc/ansible/
+└── playbooks/
+      |____ansible-playbook role_demo.yml
+
+RUN THE COMMAND:-
+cd /etc/ansible/playbook
+ansible-playbook role_demo.yml
+
+***********************************************************************************************************************************************************************
+
+

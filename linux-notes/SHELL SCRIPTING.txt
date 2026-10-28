@@ -1,0 +1,940 @@
+SHELL SCRIPTING
+
+======================================================================================================
+
+A shell is a program that accepts commands from us and gives those commands to the operating system.
+
+Types of shells in Linux
+
+cat /etc/shells
+
+1.sh
+2.bash
+3.zsh
+4.ksh
+5.fish
+6.csh
+
+Example:
+Normally you execute commands one by one:
+mkdir backup
+cd backup
+touch file.txt
+echo "Hello" > file.txt
+
+But suppose you have 20 commands.
+Instead of typing them manually every time, put them inside a file.
+
+Sample Script:
+
+1.vim script.sh
+#!/bin/bash
+mkdir backup
+cd backup
+touch file.txt
+echo "Hello" > file.txt
+
+2.chmod +x script.sh
+3.bash script.sh
+
+======================================================================================================
+
+Phase 1 — Shell & Linux Basics
+Day	File	Concept
+1	day01.sh	Hello World, shebang, execution
+2	day02.sh	Comments
+3	day03.sh	Variables
+4	day04.sh	User input
+5	day05.sh	Quotes
+6	day06.sh	Command substitution
+7	day07.sh	Environment variables
+8	day08.sh	Arithmetic
+9	day09.sh	Script arguments
+10	day10.sh	Special variables
+
+Phase 2 — Conditions & Decision Making
+Day	File	Concept
+11	day11.sh	if
+12	day12.sh	if-else
+13	day13.sh	elif
+14	day14.sh	Numeric comparison
+15	day15.sh	String comparison
+16	day16.sh	File conditions
+17	day17.sh	Directory conditions
+18	day18.sh	AND / OR / NOT
+19	day19.sh	test
+20	day20.sh	case
+
+Phase 3 — Loops
+Day	File	Concept
+21	day21.sh	for loop
+22	day22.sh	C-style for
+23	day23.sh	while
+24	day24.sh	until
+25	day25.sh	break
+26	day26.sh	continue
+27	day27.sh	Nested loops
+28	day28.sh	Loop through files
+29	day29.sh	Loop through commands
+30	day30.sh	Practical server loop
+
+Phase 4 — Functions & Arguments
+Day	File	Concept
+31	day31.sh	Functions
+32	day32.sh	Function arguments
+33	day33.sh	Return values
+34	day34.sh	Local variables
+35	day35.sh	$@
+36	day36.sh	$#
+37	day37.sh	shift
+38	day38.sh	getopts
+39	day39.sh	Reusable functions
+40	day40.sh	Menu-driven script
+
+Phase 5 — Files & Text Processing
+Day	File	Concept
+41	day41.sh	Create/read/write files
+42	day42.sh	Redirection
+43	day43.sh	Pipes
+44	day44.sh	grep
+45	day45.sh	grep advanced
+46	day46.sh	sed
+47	day47.sh	awk
+48	day48.sh	cut
+49	day49.sh	sort / uniq
+50	day50.sh	tr, wc, head, tail
+
+Phase 6 — Advanced Linux Automation
+Day	File	Concept
+51	day51.sh	find
+52	day52.sh	xargs
+53	day53.sh	File permissions
+54	day54.sh	Users/groups
+55	day55.sh	Processes
+56	day56.sh	Signals
+57	day57.sh	Background jobs
+58	day58.sh	nohup
+59	day59.sh	systemctl
+60	day60.sh	journalctl
+
+Phase 7 — Production Bash
+Day	File	Concept
+61	day61.sh	Exit status
+62	day62.sh	Error handling
+63	day63.sh	set -e
+64	day64.sh	set -u
+65	day65.sh	pipefail
+66	day66.sh	Strict mode
+67	day67.sh	Debugging
+68	day68.sh	Logging
+69	day69.sh	Temporary files
+70	day70.sh	Cleanup / traps
+
+Phase 8 — Networking & DevOps Tools
+Day	File	Concept
+71	day71.sh	curl
+72	day72.sh	API health check
+73	day73.sh	wget
+74	day74.sh	DNS/network checks
+75	day75.sh	SSH
+76	day76.sh	SCP
+77	day77.sh	Git automation
+78	day78.sh	AWS CLI
+79	day79.sh	AWS EC2 automation
+80	day80.sh	AWS S3 automation
+
+Phase 9 — Containers & Kubernetes
+Day	File	Concept
+81	day81.sh	Docker automation
+82	day82.sh	Docker image cleanup
+83	day83.sh	Docker container health
+84	day84.sh	Docker logs
+85	day85.sh	Kubernetes basics
+86	day86.sh	Pod health
+87	day87.sh	Deployment automation
+88	day88.sh	Kubernetes rollout
+89	day89.sh	Kubernetes cleanup
+90	day90.sh	EKS + kubectl automation
+
+Phase 10 — Real DevOps Automation
+Day	File	Concept
+91	day91.sh	Server monitoring
+92	day92.sh	Disk monitoring
+93	day93.sh	CPU/memory monitoring
+94	day94.sh	Log monitoring
+95	day95.sh	Database backup
+96	day96.sh	Application deployment
+97	day97.sh	Docker deployment
+98	day98.sh	Kubernetes deployment
+99	day99.sh	CI/CD deployment script
+100	day100.sh	Complete DevOps automation project
+
+======================================================================================================
+
+100 DAYS SHELL SCRIPTING FOR DEVOPS
+
+Phase 1 — Shell & Linux Basics
+
+DAY-1 FIRST SHELL SCRIPT
+
+1.vim day1.sh
+  #!/bin/bash
+  echo "Hello World"
+  echo "These is day-1"
+
+2.chmod +x day1.sh
+3.bash day1.sh
+
+------------------------------------------------------
+
+DAY-2 COMMENTS
+
+1.vim day2.sh
+  #!/bin/bash
+  #These is comment
+
+   echo "Starting Script"
+
+  #The following command prints the username
+   whoami
+
+  #The following command shows current directory
+   pwd
+
+   echo "Script Completed"
+
+2.chmod +x day2.sh
+3.bash day2.sh
+
+------------------------------------------------------
+
+DAY-3 VARIABLES
+
+1.vim day3.sh
+  #!/bin/bash
+  
+  name="Mayur"
+  course="Devops"
+  company="Cloud"
+
+  #Passing the variables
+  echo "My name is $name"
+  echo "i have completed my $course course"
+  echo "i have joined the company $company"
+
+2.chmod +x day3.sh
+3.bash day3.sh
+
+------------------------------------------------------
+
+DAY-4 USER INPUT
+
+1.vim day4.sh
+  #!/bin/bash
+
+  read -p "Enter your name: " name
+  read -p "Enter your city: " city
+
+  echo "Hello $name"
+  echo "you are from $city"
+
+2.chmod +x day4.sh
+3.bash day4.sh
+
+Enter your name: Mayur
+Enter your city: pune
+
+output:
+Hello Mayur
+your are from pune"
+
+---------------------------------------------------------
+
+DAY-5 QUOTES
+
+1.vim day5.sh
+  #!/bin/bash
+  
+  name="Mayur"
+
+  echo "Hello $name"
+  echo 'Hello $name"
+
+2.bash day5.sh
+
+Output:
+Hello Mayur
+Hello $name
+
+"double quotes" → variable expansion
+'single quotes' → literal text
+
+---------------------------------------------------------
+
+DAY-6 COMMAND SUBSTITUTION
+
+1.vim day6.sh
+  #!/bin/bash
+
+  current_user=$(whoami)
+  current_date=$(date)
+  current_directory=$(pwd)
+  hostname=$(hostname)
+
+  echo "User: $current_user"
+  echo "Date: $current_date"
+  echo "Directory: $current_directory"
+  echo "Hostname: $hostname"
+
+2.bash day6.sh
+
+---------------------------------------------------------
+
+DAY-7 ENVIRONMENT VARIABLES
+
+1.vim day7.sh
+  #!/bin/bash
+
+  echo "User: $USER"
+  echo "Home: $HOME"
+  echo "Shell: $SHELL"
+  echo "Path: $PATH"
+
+2.bash day7.sh
+
+---------------------------------------------------------
+
+DAY-8 ARITHMETIC
+
+1.vim day8.sh
+  #!/bin/bash
+
+  a=20
+  b=5
+
+  addition=$((a + b))
+  substraction=$((a - b))
+  division=$((a / b))
+  remainder=$((a % b))
+
+  echo "Addition: $addition"
+  echo "Substraction: $substraction"
+  echo "Division: $division"
+  echo "Remainder: $remainder"
+
+2.bash day8.sh
+
+Output:
+Addition: 25
+Substraction: 15
+Division: 4
+Remainder: 0
+
+---------------------------------------------------------
+
+DAY-9 SCRIPT ARGUMENTS
+
+1.vim day9.sh
+  #!/bin/bash
+
+  echo "First argument: $1"
+  echo "Second argument: $2"
+  echo "Third argument: $3"
+
+2. ./day9.sh Mayur Pranay Shubham
+
+Output:
+First argument: Mayur
+Second argument: Pranay
+Third argument: Shubham
+
+--------------------------------------------------------
+
+DAY-10 SPECIAL VARIABLES
+
+1.vim day10.sh
+#!/bin/bash
+
+echo "Script name: $0"
+echo "First argument: $1"
+echo "Second argument: $2"
+echo "Third argument: $3"
+echo "All arguments: $@"
+echo "Number of arguments: $#"
+
+2../day10.sh Docker Kubernetes Jenkins
+
+Outputs:
+Script name: ./day10.sh
+First argument: Docker
+Second argument: Kubernetes
+Third argument: Jenkins
+All arguments: Docker Kubernetes Jenkins
+Number of arguments: 3
+
+Understand:
+$0 - Name of File
+$1 - First Argument
+$@ - All Arguments
+$# - Number of arguments
+
+======================================================================================================
+
+Phase 2 — Conditions & Decision Making
+
+DAY-11 IF
+
+1.vim day11.sh
+  #!/bin/bash
+
+  age=25
+
+  if [ "$age" -ge 18 ]
+  then
+      echo "You are an adult"
+  fi
+
+2.chmod +x day11.sh
+3.bash day11.sh
+
+Output:
+You are an adult
+
+----------------------------------------------------
+
+DAY-12 IF-ELSE
+
+1.vim day12.sh
+  #!/bin/bash
+
+  disk=70
+
+  if [ "$disk" -gt 80 ]
+  then
+      echo "WARNING: Disk usage is high"
+  else
+      echo "Disk usage is normal"
+  fi
+
+2.chmod +x day12.sh
+3.bash day12.sh
+
+Output:
+Disk usage is normal
+
+----------------------------------------------------
+
+DAY-13 ELIF
+
+1.vim day13.sh
+  #!/bin/bash
+
+  usage=85
+
+  if [ "$usage" -lt 50 ]
+  then
+        echo "Disk Usage is Low"
+
+  elif [ "$usage" -lt 80 ]
+  then
+        echo "Disk usage is NORMAL"
+  else
+        echo "Disk usage is HIGH"
+  fi
+
+2.chmod +x day13.sh
+3.bash day13.sh
+
+Output:
+Disk usage is HIGH
+
+----------------------------------------------------
+
+DAY-14 NUMERIC OPERATORS
+
+1.vim day14.sh
+  #!/bin/bash
+  
+  a=20
+  b=10
+
+  if [ "$a" -eq "$b" ]
+  then
+      echo "Equal"
+
+  elif [ "$a" -gt "$b" ]
+  then
+      echo "A is greater"
+
+  else
+      echo "B is greater"
+  fi
+
+2.chmod +x day14.sh
+3.bash day14.sh
+
+Output:
+A is greater
+
+Remember:
+-eq → equal
+-ne → not equal
+-gt → greater than
+-lt → less than
+-ge → greater/equal
+-le → less/equal
+
+----------------------------------------------------
+
+DAY-15 STRING COMPARISON
+
+1.vim day15.sh
+  #!/bin/bash
+
+  environment="production"
+
+  if [ "$environment" = "production" ]
+  then
+        echo "Production environment"
+  else
+        echo "Non-production environment"
+  fi
+
+2.chmod +x day15.sh
+3.bash day15.sh
+
+----------------------------------------------------
+
+DAY-16 FILE CONDITIONS
+
+1.vim day16.sh
+  #!/bin/bash
+
+  file="application.log"
+  
+  if [ -f "$file" ]
+  then 
+     echo "$file exists"
+  else 
+     echo "$file does not exists"
+  fi
+
+2.chmod +x day16.sh
+3.bash day16.sh
+
+output:
+application.log does not exist
+
+Remember:
+-f → regular file
+-d → directory
+-r → readable
+-w → writable
+-x → executable
+-s → file has content
+
+----------------------------------------------------
+
+DAY-17 DIRECTORY CHECK
+
+1.vim day17.sh
+  #!/bin/bash
+
+  directory="/var/log"
+
+  if [ -d "$directory" ]
+  then
+     echo "$directory exists"
+  else 
+     echo "$directory does not exists"
+  fi
+
+2.chmod +x day17.sh
+3.bash day17.sh
+
+Output:
+/var/log exists
+
+----------------------------------------------------
+
+DAY-18 LOGICAL OPERATORS [AND / OR / NOT]
+
+1.vim day18.sh
+  #!/bin/bash
+
+  user="admin"
+  environment="production"
+
+  if [ "$user" = "admin" ] && [ "$environment" = "production" ]
+  then
+        echo "Admin has production access"
+  else
+        echo "Access Denied" 
+  fi
+
+2.chmod +x day18.sh
+3.bash day18.sh
+
+Output:
+Admin has production access
+
+Remember:
+&& → AND
+|| → OR
+!  → NOT
+
+----------------------------------------------------
+
+DAY-19 TEST
+
+1.vim day19.sh
+  #!/bin/bash
+
+  if test -d /tmp
+  then
+     echo "/tmp exists"
+  else
+     echo "/tmp does not exist"
+  fi
+
+2.chmod +x day19.sh
+3.bash day19.sh
+
+Output:
+/tmp exists
+
+These Two are Equivalent:
+1.if [ -f file.txt ]
+2.if test -f file.txt
+
+----------------------------------------------------
+
+DAY-20 CASE
+
+1.vim day20.sh
+  #!/bin/bash
+
+  read -p "Enter action: " action
+
+  case "$action" in
+    start)
+        echo "Starting application"
+        ;;
+
+    stop)
+        echo "Stopping application"
+        ;;
+
+    restart)
+        echo "Restarting application"
+        ;;
+
+    status)
+        echo "Checking application"
+        ;;
+
+    *)
+        echo "Invalid action"
+        ;;
+  esac
+
+2.chmod +x day20.sh
+3.bash day20.sh
+  Enter action: start
+
+Output:
+Starting application
+
+==============================================================================================================
+
+Phase-3 LOOPS
+
+DAY-21 FOR LOOP
+
+1.vim day21.sh
+  #!/bin/bash
+ 
+  for server in server1 server2 server3
+  do
+        echo "Checking $server"
+  done
+
+2.chmod +x day21.sh
+3.bash day21.sh
+
+Output:
+Checking server1
+Checking server2
+Checking server3
+
+-------------------------------------------------------------------------
+
+DAY-22 C-STYLE LOOP
+
+1.vim day22.sh
+  #!/bin/bash
+  
+  for ((i=1; i<=10; i++))
+  do
+      echo "Number: $i"
+  done
+
+2.chmod +x day22.sh
+3.bash day22.sh
+
+Outputs:
+Number: 1
+Number: 2
+Number: 3
+Number: 4
+Number: 5
+Number: 6
+Number: 7
+Number: 8
+Number: 9
+Number: 10
+
+---------------------------------------------------------------------------
+
+DAY-23 WHILE
+
+1.vim day23.sh
+  #!/bin/bash
+  
+  count=1
+  while [ "$count" -le 5 ]
+  do
+     echo "Count: $count"
+     count=$((count + 1))
+  done
+
+2.chmod +x day23.sh
+3.bash day23.sh
+
+Output:
+Count: 1
+Count: 2
+Count: 3
+Count: 4
+Count: 5
+
+---------------------------------------------------------------------------
+
+DAY-24 UNTIL
+
+1.vim day24.sh
+  #!/bin/bash
+
+  count=1
+
+  until [ "$count" -gt 5 ]
+  do
+      echo "Count: $count"
+      count=$((count + 1))
+  done
+
+2.chmod +x day24.sh
+3.bash day24.sh
+
+Output:
+Count: 1
+Count: 2
+Count: 3
+Count: 4
+Count: 5
+
+-------------------------------------------------
+
+DAY-25 BREAK
+
+1.vim day25.sh
+  #!/bin/bash
+
+  for i in 1 2 3 4 5
+  do
+        if [ "$i" -eq 3 ]
+        then
+                break
+        fi
+
+        echo "$i"
+  done
+  
+2.bash day25.sh
+
+Output:
+1
+2
+
+-------------------------------------------------
+
+DAY-26 CONTINUE
+
+1.vim day26.sh
+  #!/bin/bash
+
+  for i in 1 2 3 4 5
+  do
+        if [ "$i" -eq 3 ]
+        then
+                continue
+        fi
+
+        echo "$i"
+  done
+
+2.bash day26.sh
+
+Output:
+1
+2
+4
+5
+
+-------------------------------------------------
+
+DAY-27 NESTED LOOPS
+
+1.vim day27.sh
+  #!/bin/bash
+
+  for environment in dev test prod
+  do
+      for service in frontend backend database
+      do
+          echo "$environment - $service"
+      done
+  done
+
+2.bash day27.sh
+
+Output:
+dev - frontend
+dev - backend
+dev - database
+test - frontend
+test - backend
+test - database
+prod - frontend
+prod - backend
+prod - database
+
+-------------------------------------------------
+
+DAY-28 LOOP THROUGH FILES
+
+1.vim day28.sh
+  #!/bin/bash
+ 
+  for file in *.log
+  do
+     echo "Log file: $file"
+  done
+
+2.bash day28.sh
+
+Outputs:
+Log file: *.log
+ 
+-------------------------------------------------
+
+DAY-29 LOOP THROUGH COMMANDS
+
+1.vim day29.sh
+  #!/bin/bash
+
+  commands=("date" "hostname" "whoami" "uptime")
+
+  for command in "${commands[@]}"
+  do
+     echo "Running: $command"
+     eval "$command"
+  done
+
+2.bash day29.sh
+
+Outputs:
+Running: date
+Fri Sep 18 17:42:35 UTC 2026
+Running: hostname
+MayurPandit
+Running: whoami
+root
+Running: uptime
+ 17:42:35 up 43 min,  2 users,  load average: 0.00, 0.00, 0.00
+
+-------------------------------------------------
+
+DAY-30 PRACTICAL SERVER LOOP
+
+1.vim day30.sh
+
+  #!/bin/bash
+
+  servers=("server1" "server2" "server3")
+
+  for server in "${servers[@]}"
+  do
+     echo "===================="
+     echo "Checking $server"
+     echo "===================="
+
+     echo "Server check completed"
+  done
+
+2.bash day30.sh
+
+Outputs:
+====================
+Checking server1
+====================
+Server check completed
+====================
+Checking server2
+====================
+Server check completed
+====================
+Checking server3
+====================
+Server check completed
+
+=====================================================================================================================================
+
+Phase 4 — Functions & Arguments
+
+DAY-31 FUNCTIONS
+
+1.vim day31.sh
+  #!/bin/bash
+
+  hello () {
+        echo "Hello DevOps"
+  }
+
+  hello
+
+2.bash day31.sh
+
+Output:
+Hello DevOps
+
+-----------------------------------------------
+
+
+
+
+
+
+=====================================================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
